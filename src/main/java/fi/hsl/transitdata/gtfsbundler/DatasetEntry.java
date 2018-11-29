@@ -1,4 +1,4 @@
-package fi.hsl.pulsar.transitdata.gtfsbundler;
+package fi.hsl.transitdata.gtfsbundler;
 
 import com.google.transit.realtime.GtfsRealtime;
 import org.apache.pulsar.client.api.Message;

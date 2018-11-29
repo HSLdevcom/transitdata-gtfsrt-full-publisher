@@ -1,4 +1,4 @@
-package fi.hsl.pulsar.transitdata.gtfsbundler;
+package fi.hsl.transitdata.gtfsbundler;
 
 import com.typesafe.config.Config;
 import fi.hsl.common.config.ConfigParser;

@@ -1,6 +1,5 @@
-package fi.hsl.pulsar.transitdata.gtfsbundler;
+package fi.hsl.transitdata.gtfsbundler;
 
-import com.google.transit.realtime.GtfsRealtime;
 import com.typesafe.config.Config;
 import fi.hsl.common.pulsar.IMessageHandler;
 import fi.hsl.common.pulsar.PulsarApplicationContext;
