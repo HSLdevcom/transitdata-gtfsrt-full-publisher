@@ -16,10 +16,12 @@ public class DatasetBundler {
     final HashMap<Long, DatasetEntry> cache = new HashMap<>();
     final int maxAgeInMs;
     final String path;
+    final String fileName;
 
     public DatasetBundler(Config config) {
         maxAgeInMs = config.getInt("bundler.maxAgeInMinutes") * 60 * 1000;
         path = config.getString("bundler.outputPath");
+        fileName = config.getString("bundler.outputFileName");
     }
 
     public void initialize() throws Exception {
@@ -58,7 +60,7 @@ public class DatasetBundler {
         final long nowInSecs = now / 1000;
         GtfsRealtime.FeedMessage fullDump = createFeedMessage(entities, nowInSecs);
 
-        save(fullDump, path, "test.gtfsrt");
+        save(fullDump, path, fileName);
 
         long elapsed = System.currentTimeMillis() - startTime;
         log.info("Bundling done in {} ms", elapsed);
