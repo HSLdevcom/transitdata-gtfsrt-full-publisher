@@ -9,15 +9,10 @@ import org.apache.pulsar.client.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Queue;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class MessageProcessor implements IMessageHandler {
 
@@ -26,14 +21,17 @@ public class MessageProcessor implements IMessageHandler {
     private Consumer<byte[]> consumer;
     final ScheduledExecutorService scheduler;
 
-    final Queue<GtfsRealtime.TripUpdate> inputQueue = new LinkedList<>();
+    final List<DatasetEntry> inputQueue = new LinkedList<>();
+    final DatasetBundler bundler;
 
     public MessageProcessor(PulsarApplicationContext context) {
         this.consumer = context.getConsumer();
         Config config = context.getConfig();
+
+        bundler = new DatasetBundler(config);
+
         long intervalInSecs = config.getInt("bundler.dumpIntervalInSecs");
         log.info("Dump interval {} seconds", intervalInSecs);
-
         scheduler = Executors.newSingleThreadScheduledExecutor();
         log.info("Starting result-scheduler");
 
@@ -52,13 +50,19 @@ public class MessageProcessor implements IMessageHandler {
     }
 
     private void dump() {
-        Queue<GtfsRealtime.TripUpdate> copy = new LinkedList<>();
+        List<DatasetEntry> copy = new LinkedList<>();
         synchronized (inputQueue) {
             copy.addAll(inputQueue);
             inputQueue.clear();
         }
-        //TODO magic
+
         log.info("Dump-time, new messages: {}", copy.size());
+        try {
+            bundler.bundle(copy);
+        }
+        catch (Exception e) {
+            log.error("Failed to bundle full gtfs dataset", e);
+        }
     }
 
     @Override
@@ -91,16 +95,9 @@ public class MessageProcessor implements IMessageHandler {
     }
 
     private void handleTripUpdateMessage(final Message msg) throws Exception {
-        GtfsRealtime.FeedMessage feedMessage = GtfsRealtime.FeedMessage.parseFrom(msg.getData());
-
-        List<GtfsRealtime.TripUpdate> tripUpdates = feedMessage.getEntityList()
-                .stream()
-                .flatMap(
-                        entity -> entity.hasTripUpdate() ? Stream.of(entity.getTripUpdate()) : Stream.empty()
-                ).collect(Collectors.toList());
-
+        DatasetEntry entry = DatasetEntry.newEntry(msg);
         synchronized (inputQueue) {
-            inputQueue.addAll(tripUpdates);
+            inputQueue.add(entry);
         }
     }
 
