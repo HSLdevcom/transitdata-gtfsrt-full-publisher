@@ -60,7 +60,7 @@ public class MessageProcessor implements IMessageHandler {
             bundler.bundle(copy);
         }
         catch (Exception e) {
-            log.error("Failed to bundle full gtfs dataset", e);
+            log.error("Failed to bundle Full GTFS-RT dataset", e);
         }
     }
 

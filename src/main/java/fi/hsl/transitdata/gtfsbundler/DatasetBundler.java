@@ -27,10 +27,16 @@ public class DatasetBundler {
     }
 
     public synchronized void bundle(List<DatasetEntry> newMessages) throws Exception {
+        if (newMessages.isEmpty()) {
+            log.warn("No new messages to bundle, ignoring.");
+            return;
+        }
+
         long startTime = System.currentTimeMillis();
-        log.info("Starting GTFS Full dataset bundling");
+        log.info("Starting GTFS Full dataset bundling. Cache size: {}, new events: {}", cache.size(), newMessages.size());
 
         mergeEventsToCache(newMessages, cache);
+        log.info("Cache size after merging: {}", cache.size());
 
         //filter old ones out
         log.info("Pruning cache, removing events older than {}", maxAgeInMs);
