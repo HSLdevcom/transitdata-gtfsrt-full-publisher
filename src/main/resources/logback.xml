@@ -12,6 +12,9 @@
             </layout>
         </encoder>
     </appender>
+    <logger name="fi.hsl.transitdata.gtfsbundler.AzureSink" level="debug" additivity="false">
+        <appender-ref ref="stdout" />
+    </logger>
     <logger name="fi.hsl" level="info" additivity="false">
         <appender-ref ref="stdout" />
     </logger>
