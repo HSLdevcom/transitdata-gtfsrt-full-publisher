@@ -55,6 +55,8 @@ public class AzureSink implements ISink {
 
             CloudBlockBlob blob = container.getBlockBlobReference(name);
             log.debug("Got reference to CloudBlockBlob with name {}", blob.getName());
+            blob.getProperties().setContentType("application/x-protobuf");
+
             final InputStream inputStream = new ByteArrayInputStream(data);
             final int length = data.length;
 
