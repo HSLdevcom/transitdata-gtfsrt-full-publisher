@@ -5,8 +5,6 @@ import com.typesafe.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -15,13 +13,26 @@ public class DatasetBundler {
 
     final HashMap<Long, DatasetEntry> cache = new HashMap<>();
     final int maxAgeInMs;
-    final String path;
     final String fileName;
+    final Destination destination;
+
+    final ISink sink;
+
+    public enum Destination {
+        local, azure
+    }
 
     public DatasetBundler(Config config) {
         maxAgeInMs = config.getInt("bundler.maxAgeInMinutes") * 60 * 1000;
-        path = config.getString("bundler.outputPath");
-        fileName = config.getString("bundler.outputFileName");
+        fileName = config.getString("bundler.output.fileName");
+        destination = Destination.valueOf(config.getString("bundler.output.destination"));
+        log.info("Using file destination: {}", destination);
+
+        if (destination == Destination.azure) {
+            sink = new AzureSink(config);
+        } else {
+            sink = new LocalSink(config);
+        }
     }
 
     public void initialize() throws Exception {
@@ -60,7 +71,7 @@ public class DatasetBundler {
         final long nowInSecs = now / 1000;
         GtfsRealtime.FeedMessage fullDump = createFeedMessage(entities, nowInSecs);
 
-        save(fullDump, path, fileName);
+        sink.put(fileName, fullDump.toByteArray());
 
         long elapsed = System.currentTimeMillis() - startTime;
         log.info("Bundling done in {} ms", elapsed);
@@ -107,11 +118,4 @@ public class DatasetBundler {
                 .build();
     }
 
-    void save(GtfsRealtime.FeedMessage feedMessage, String path, String fileName) throws Exception {
-        //TODO upload to somewhere.
-        byte[] data = feedMessage.toByteArray();
-        String fullPath = path.endsWith("/") ? path + fileName : path + "/" + fileName;
-
-        Files.write(Paths.get(fullPath), data);
-    }
 }
