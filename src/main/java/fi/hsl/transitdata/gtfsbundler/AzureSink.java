@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.security.InvalidKeyException;
 import java.util.Scanner;
 
 public class AzureSink implements ISink {
@@ -33,6 +34,8 @@ public class AzureSink implements ISink {
         //We'll use Docker secrets for getting the key
         String keyPath = config.getString("bundler.output.azure.accountKeyPath");
         String key = new Scanner(new File(keyPath)).useDelimiter("\\Z").next();
+        System.out.println(key);
+
         return new AzureSink(name, key, container);
     }
 
@@ -83,6 +86,10 @@ public class AzureSink implements ISink {
                 log.info(blobItem.getUri().toString());
             }
 
+        }
+        catch (InvalidKeyException ex) {
+            log.error("Invalid Azure key", ex);
+            throw ex;
         }
         catch (StorageException ex) {
             log.error("Error returned from the service. Http code: {} and error code: {}", ex.getHttpStatusCode(), ex.getErrorCode());
