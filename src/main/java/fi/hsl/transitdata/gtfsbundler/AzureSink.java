@@ -48,6 +48,7 @@ public class AzureSink implements ISink {
             log.debug("Got reference to CloudBlobContainer");
 
             // Create the container if it does not exist with public access.
+            // TODO we might want to keep the access private and distribute the file via CDN.
             boolean created = container.createIfNotExists(BlobContainerPublicAccessType.CONTAINER, new BlobRequestOptions(), new OperationContext());
             if (created) {
                 log.warn("New container named {} created because existing wasn't found", container.getName());
