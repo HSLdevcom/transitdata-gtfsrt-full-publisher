@@ -29,7 +29,7 @@ public class AzureSink implements ISink {
         upload(name, data, containerName, accountName, accountKey);
     }
 
-    private static void upload(String name, byte[] data, String containerName, String accountName, String accountKey) {
+    private static void upload(String name, byte[] data, String containerName, String accountName, String accountKey) throws Exception {
         log.info("Uploading file {} with {} kB to Azure Blob storage", name, (data.length / 1024));
         final long startTime = System.currentTimeMillis();
         final String storageConnectionString = (new StringBuilder())
@@ -75,9 +75,11 @@ public class AzureSink implements ISink {
         catch (StorageException ex) {
             log.error("Error returned from the service. Http code: {} and error code: {}", ex.getHttpStatusCode(), ex.getErrorCode());
             log.warn("Full stack trace", ex);
+            throw ex;
         }
         catch (Exception ex) {
             log.error("Unknown exception while uploading file to storage", ex);
+            throw ex;
         }
         finally {
             long now = System.currentTimeMillis();
