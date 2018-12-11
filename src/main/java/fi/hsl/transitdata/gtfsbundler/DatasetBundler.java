@@ -14,7 +14,6 @@ public class DatasetBundler {
     final HashMap<Long, DatasetEntry> cache = new HashMap<>();
     final int maxAgeInMs;
     final String fileName;
-    final Destination destination;
 
     final ISink sink;
 
@@ -22,17 +21,22 @@ public class DatasetBundler {
         local, azure
     }
 
-    public DatasetBundler(Config config) {
+    private DatasetBundler(Config config, ISink sink) {
         maxAgeInMs = config.getInt("bundler.maxAgeInMinutes") * 60 * 1000;
         fileName = config.getString("bundler.output.fileName");
-        destination = Destination.valueOf(config.getString("bundler.output.destination"));
-        log.info("Using file destination: {}", destination);
+        this.sink = sink;
+    }
 
+    public static DatasetBundler newInstance(Config config) throws Exception {
+        Destination destination = Destination.valueOf(config.getString("bundler.output.destination"));
+        log.info("Using file destination: {}", destination);
+        ISink sink = null;
         if (destination == Destination.azure) {
-            sink = new AzureSink(config);
+            sink = AzureSink.newInstance(config);
         } else {
             sink = new LocalSink(config);
         }
+        return new DatasetBundler(config, sink);
     }
 
     public void initialize() throws Exception {

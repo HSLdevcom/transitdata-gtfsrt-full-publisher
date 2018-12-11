@@ -5,10 +5,12 @@ import com.microsoft.azure.storage.OperationContext;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.*;
 import com.typesafe.config.Config;
+import fi.hsl.common.config.ConfigUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.util.Scanner;
 
 public class AzureSink implements ISink {
     private static final Logger log = LoggerFactory.getLogger(AzureSink.class);
@@ -17,11 +19,21 @@ public class AzureSink implements ISink {
     private final String accountKey;
     private final String containerName;
 
-    public AzureSink(Config config) {
+    private AzureSink(String accountName, String accountKey, String containerName) {
+        this.accountName = accountName;
+        this.accountKey = accountKey;
+        this.containerName = containerName;
+    }
+
+    public static AzureSink newInstance(Config config) throws Exception {
         //TODO read from docker secrets
-        accountName = config.getString("bundler.output.azure.accountName");
-        accountKey = config.getString("bundler.output.azure.accountKey");
-        containerName = config.getString("bundler.output.azure.containerName");
+        String name = config.getString("bundler.output.azure.accountName");
+        String container = config.getString("bundler.output.azure.containerName");
+
+        //We'll use Docker secrets for getting the key
+        String keyPath = config.getString("bundler.output.azure.accountKeyPath");
+        String key = new Scanner(new File(keyPath)).useDelimiter("\\Z").next();
+        return new AzureSink(name, key, container);
     }
 
     @Override
