@@ -6,13 +6,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class DatasetBundler {
     private static final Logger log = LoggerFactory.getLogger(DatasetBundler.class);
 
     final HashMap<Long, DatasetEntry> cache = new HashMap<>();
-    final int maxAgeInMs;
+    final long maxAgeInMs;
     final String fileName;
 
     final ISink sink;
@@ -22,7 +23,7 @@ public class DatasetBundler {
     }
 
     private DatasetBundler(Config config, ISink sink) {
-        maxAgeInMs = config.getInt("bundler.maxAgeInMinutes") * 60 * 1000;
+        maxAgeInMs = config.getDuration("bundler.maxAge", TimeUnit.MILLISECONDS);
         fileName = config.getString("bundler.output.fileName");
         this.sink = sink;
     }
@@ -88,7 +89,7 @@ public class DatasetBundler {
         newMessages.forEach(entry -> cache.put(entry.getDvjId(), entry));
     }
 
-    static void removeOldEntries(Map<Long, DatasetEntry> cache, int maxAgeInMs, long nowUtcMs) {
+    static void removeOldEntries(Map<Long, DatasetEntry> cache, long maxAgeInMs, long nowUtcMs) {
         Iterator<Map.Entry<Long, DatasetEntry>> it = cache.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<Long, DatasetEntry> pair = it.next();

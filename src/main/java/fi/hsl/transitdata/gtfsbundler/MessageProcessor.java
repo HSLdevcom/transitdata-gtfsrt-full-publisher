@@ -30,7 +30,7 @@ public class MessageProcessor implements IMessageHandler {
         Config config = app.getContext().getConfig();
         this.bundler = bundler;
 
-        long intervalInSecs = config.getInt("bundler.dumpIntervalInSecs");
+        long intervalInSecs = config.getDuration("bundler.dumpInterval", TimeUnit.SECONDS);
         log.info("Dump interval {} seconds", intervalInSecs);
         scheduler = Executors.newSingleThreadScheduledExecutor();
         log.info("Starting result-scheduler");
