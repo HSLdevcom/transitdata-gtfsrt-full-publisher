@@ -121,10 +121,8 @@ public class MessageProcessor implements IMessageHandler {
             return Optional.of(schema);
         }
         catch (Exception e) {
-            //log.error("Failed to parse protobuf schema", e);
-            //return Optional.empty();
-            //DEBUG, now the TripUpdateProcessor doesn't yet output this. TODO fix once PR merged
-            return Optional.of(TransitdataProperties.ProtobufSchema.GTFS_TripUpdate);
+            log.error("Failed to parse protobuf schema", e);
+            return Optional.empty();
         }
     }
 
