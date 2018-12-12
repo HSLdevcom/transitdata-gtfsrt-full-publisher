@@ -3,7 +3,6 @@ package fi.hsl.transitdata.gtfsbundler;
 import com.typesafe.config.Config;
 import fi.hsl.common.pulsar.IMessageHandler;
 import fi.hsl.common.pulsar.PulsarApplication;
-import fi.hsl.common.pulsar.PulsarApplicationContext;
 import fi.hsl.common.transitdata.TransitdataProperties;
 import org.apache.pulsar.client.api.*;
 import org.slf4j.Logger;
@@ -81,8 +80,9 @@ public class MessageProcessor implements IMessageHandler {
         try {
             parseProtobufSchema(msg).ifPresent(schema -> {
                 try {
-                    if (schema == TransitdataProperties.ProtobufSchema.GTFS_TripUpdate) {
-                        handleTripUpdateMessage(msg);
+                    if (schema == TransitdataProperties.ProtobufSchema.GTFS_TripUpdate ||
+                        schema == TransitdataProperties.ProtobufSchema.GTFS_ServiceAlert) {
+                        handleFeedMessage(msg);
                     }
                     else {
                         log.info("Ignoring message of schema " + schema);
@@ -105,7 +105,7 @@ public class MessageProcessor implements IMessageHandler {
         }
     }
 
-    private void handleTripUpdateMessage(final Message msg) throws Exception {
+    private void handleFeedMessage(final Message msg) throws Exception {
         DatasetEntry entry = DatasetEntry.newEntry(msg);
         synchronized (inputQueue) {
             inputQueue.add(entry);

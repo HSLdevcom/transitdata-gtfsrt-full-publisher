@@ -6,26 +6,22 @@ import org.apache.pulsar.client.api.Message;
 import java.util.List;
 
 public class DatasetEntry {
-    private DatasetEntry(long id, long evetTimeMs, List<GtfsRealtime.FeedEntity> entities) {
+    private DatasetEntry(long id, long evetTimeMs, GtfsRealtime.FeedMessage feedMessage) {
         this.dvjId = id;
-        this.entities = entities;
+        this.feedMessage = feedMessage;
         this.eventTimeMs = evetTimeMs;
     }
 
     private long dvjId;
     private long eventTimeMs;
-    /**
-     * We store all entities parsed from one TripUpdate message.
-     * Currently we only have one entity per message but storing the whole list makes us future-proof if this ever changes.
-     */
-    private List<GtfsRealtime.FeedEntity> entities;
+    private GtfsRealtime.FeedMessage feedMessage;
 
     public static DatasetEntry newEntry(Message msg) throws Exception {
         long dvjId = Long.parseLong(msg.getKey());
         long eventTimeMs = msg.getEventTime();
         GtfsRealtime.FeedMessage feedMessage = GtfsRealtime.FeedMessage.parseFrom(msg.getData());
 
-        return new DatasetEntry(dvjId, eventTimeMs, feedMessage.getEntityList());
+        return new DatasetEntry(dvjId, eventTimeMs, feedMessage);
     }
 
     public long getDvjId() {
@@ -36,7 +32,11 @@ public class DatasetEntry {
         return eventTimeMs;
     }
 
+    public GtfsRealtime.FeedMessage getFeedMessage() {
+        return feedMessage;
+    }
+
     public List<GtfsRealtime.FeedEntity> getEntities() {
-        return entities;
+        return feedMessage.getEntityList();
     }
 }
