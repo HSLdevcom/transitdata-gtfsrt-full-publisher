@@ -10,7 +10,7 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <pulsar.version>2.1.0-incubating</pulsar.version>
-        <common.version>0.2.3</common.version>
+        <common.version>0.4.0</common.version>
     </properties>
 
     <repositories>
@@ -26,6 +26,11 @@
             <groupId>fi.hsl</groupId>
             <artifactId>transitdata-common</artifactId>
             <version>${common.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.microsoft.azure</groupId>
+            <artifactId>azure-storage</artifactId>
+            <version>5.0.0</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>

@@ -19,8 +19,7 @@ public class Main {
         log.info("Configurations read, launching Pulsar Application");
 
         try (PulsarApplication app = PulsarApplication.newInstance(config)) {
-            PulsarApplicationContext context = app.getContext();
-            MessageProcessor processor = new MessageProcessor(context);
+            MessageProcessor processor = MessageProcessor.newInstance(app);
 
             log.info("Starting to process messages");
 

@@ -2,6 +2,7 @@ package fi.hsl.transitdata.gtfsbundler;
 
 import com.typesafe.config.Config;
 import fi.hsl.common.pulsar.IMessageHandler;
+import fi.hsl.common.pulsar.PulsarApplication;
 import fi.hsl.common.pulsar.PulsarApplicationContext;
 import fi.hsl.common.transitdata.TransitdataProperties;
 import org.apache.pulsar.client.api.*;
@@ -23,13 +24,13 @@ public class MessageProcessor implements IMessageHandler {
     final List<DatasetEntry> inputQueue = new LinkedList<>();
     final DatasetBundler bundler;
 
-    public MessageProcessor(PulsarApplicationContext context) {
-        this.consumer = context.getConsumer();
-        Config config = context.getConfig();
+    private MessageProcessor(final PulsarApplication app, DatasetBundler bundler) {
 
-        bundler = new DatasetBundler(config);
+        this.consumer = app.getContext().getConsumer();
+        Config config = app.getContext().getConfig();
+        this.bundler = bundler;
 
-        long intervalInSecs = config.getInt("bundler.dumpIntervalInSecs");
+        long intervalInSecs = config.getDuration("bundler.dumpInterval", TimeUnit.SECONDS);
         log.info("Dump interval {} seconds", intervalInSecs);
         scheduler = Executors.newSingleThreadScheduledExecutor();
         log.info("Starting result-scheduler");
@@ -38,17 +39,27 @@ public class MessageProcessor implements IMessageHandler {
             try {
                 log.debug("Checking results!");
                 dump();
-                //clean(); //Possibly also clean old files?
             }
             catch (Exception e) {
-                log.error("Failed to check results", e);
+                log.error("Failed to check results, closing application", e);
+                closeApplication(app, scheduler);
             }
-
         }, intervalInSecs, intervalInSecs, TimeUnit.SECONDS);
 
     }
 
-    private void dump() {
+    public static MessageProcessor newInstance(final PulsarApplication app) throws Exception {
+        DatasetBundler bundler = DatasetBundler.newInstance(app.getContext().getConfig());
+        return new MessageProcessor(app, bundler);
+    }
+
+    private static void closeApplication(PulsarApplication app, ScheduledExecutorService scheduler) {
+        log.warn("Closing application");
+        scheduler.shutdown();
+        app.close();
+    }
+
+    private void dump() throws Exception {
         List<DatasetEntry> copy = new LinkedList<>();
         synchronized (inputQueue) {
             copy.addAll(inputQueue);
@@ -61,6 +72,7 @@ public class MessageProcessor implements IMessageHandler {
         }
         catch (Exception e) {
             log.error("Failed to bundle Full GTFS-RT dataset", e);
+            throw e;
         }
     }
 
