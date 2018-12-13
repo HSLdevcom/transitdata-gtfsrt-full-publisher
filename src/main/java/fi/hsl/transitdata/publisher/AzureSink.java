@@ -1,11 +1,10 @@
-package fi.hsl.transitdata.gtfsbundler;
+package fi.hsl.transitdata.publisher;
 
 import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.OperationContext;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.*;
 import com.typesafe.config.Config;
-import fi.hsl.common.config.ConfigUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

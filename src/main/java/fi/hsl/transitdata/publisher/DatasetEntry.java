@@ -1,10 +1,9 @@
-package fi.hsl.transitdata.gtfsbundler;
+package fi.hsl.transitdata.publisher;
 
 import com.google.transit.realtime.GtfsRealtime;
 import org.apache.pulsar.client.api.Message;
 
 import java.util.List;
-import java.util.Optional;
 
 public class DatasetEntry {
     private DatasetEntry(long id, long evetTimeMs, GtfsRealtime.FeedMessage feedMessage) {
@@ -17,14 +16,14 @@ public class DatasetEntry {
     private long eventTimeMs;
     private GtfsRealtime.FeedMessage feedMessage;
 
-    public static DatasetEntry newEntry(Message msg, DatasetBundler.DataType expectedType) throws Exception {
+    public static DatasetEntry newEntry(Message msg, DatasetPublisher.DataType expectedType) throws Exception {
         long eventTimeMs = msg.getEventTime();
         GtfsRealtime.FeedMessage feedMessage = GtfsRealtime.FeedMessage.parseFrom(msg.getData());
-        if (expectedType == DatasetBundler.DataType.ServiceAlert) {
+        if (expectedType == DatasetPublisher.DataType.ServiceAlert) {
             // No DVJ-ID for Service Alerts
             return new DatasetEntry(0L, eventTimeMs, feedMessage);
         }
-        else if (expectedType == DatasetBundler.DataType.TripUpdate) {
+        else if (expectedType == DatasetPublisher.DataType.TripUpdate) {
             long dvjId = Long.parseLong(msg.getKey());
             return new DatasetEntry(dvjId, eventTimeMs, feedMessage);
         }

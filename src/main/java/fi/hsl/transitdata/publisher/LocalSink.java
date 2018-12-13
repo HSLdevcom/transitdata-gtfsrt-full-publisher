@@ -1,4 +1,4 @@
-package fi.hsl.transitdata.gtfsbundler;
+package fi.hsl.transitdata.publisher;
 
 import com.typesafe.config.Config;
 

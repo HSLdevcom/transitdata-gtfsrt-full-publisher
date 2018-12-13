@@ -1,9 +1,8 @@
-package fi.hsl.transitdata.gtfsbundler;
+package fi.hsl.transitdata.publisher;
 
 import com.typesafe.config.Config;
 import fi.hsl.common.config.ConfigParser;
 import fi.hsl.common.pulsar.PulsarApplication;
-import fi.hsl.common.pulsar.PulsarApplicationContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
