@@ -34,7 +34,6 @@ public class AzureSink implements ISink {
         //We'll use Docker secrets for getting the key
         String keyPath = config.getString("bundler.output.azure.accountKeyPath");
         String key = new Scanner(new File(keyPath)).useDelimiter("\\Z").next();
-        System.out.println(key);
 
         return new AzureSink(name, key, container);
     }

@@ -3,7 +3,6 @@ package fi.hsl.transitdata.gtfsbundler;
 import com.typesafe.config.Config;
 import fi.hsl.common.pulsar.IMessageHandler;
 import fi.hsl.common.pulsar.PulsarApplication;
-import fi.hsl.common.pulsar.PulsarApplicationContext;
 import fi.hsl.common.transitdata.TransitdataProperties;
 import org.apache.pulsar.client.api.*;
 import org.slf4j.Logger;
@@ -23,12 +22,15 @@ public class MessageProcessor implements IMessageHandler {
 
     final List<DatasetEntry> inputQueue = new LinkedList<>();
     final DatasetBundler bundler;
+    final DatasetBundler.DataType dataType;
 
     private MessageProcessor(final PulsarApplication app, DatasetBundler bundler) {
 
         this.consumer = app.getContext().getConsumer();
         Config config = app.getContext().getConfig();
         this.bundler = bundler;
+        this.dataType = DatasetBundler.DataType.valueOf(config.getString("bundler.dataType"));
+        log.info("Reading data of type {} from topic {}", dataType, consumer.getTopic());
 
         long intervalInSecs = config.getDuration("bundler.dumpInterval", TimeUnit.SECONDS);
         log.info("Dump interval {} seconds", intervalInSecs);
@@ -81,8 +83,9 @@ public class MessageProcessor implements IMessageHandler {
         try {
             parseProtobufSchema(msg).ifPresent(schema -> {
                 try {
-                    if (schema == TransitdataProperties.ProtobufSchema.GTFS_TripUpdate) {
-                        handleTripUpdateMessage(msg);
+                    if (schema == TransitdataProperties.ProtobufSchema.GTFS_TripUpdate ||
+                        schema == TransitdataProperties.ProtobufSchema.GTFS_ServiceAlert) {
+                        handleFeedMessage(msg);
                     }
                     else {
                         log.info("Ignoring message of schema " + schema);
@@ -105,8 +108,8 @@ public class MessageProcessor implements IMessageHandler {
         }
     }
 
-    private void handleTripUpdateMessage(final Message msg) throws Exception {
-        DatasetEntry entry = DatasetEntry.newEntry(msg);
+    private void handleFeedMessage(final Message msg) throws Exception {
+        DatasetEntry entry = DatasetEntry.newEntry(msg, dataType);
         synchronized (inputQueue) {
             inputQueue.add(entry);
         }
@@ -121,10 +124,8 @@ public class MessageProcessor implements IMessageHandler {
             return Optional.of(schema);
         }
         catch (Exception e) {
-            //log.error("Failed to parse protobuf schema", e);
-            //return Optional.empty();
-            //DEBUG, now the TripUpdateProcessor doesn't yet output this. TODO fix once PR merged
-            return Optional.of(TransitdataProperties.ProtobufSchema.GTFS_TripUpdate);
+            log.error("Failed to parse protobuf schema", e);
+            return Optional.empty();
         }
     }
 
