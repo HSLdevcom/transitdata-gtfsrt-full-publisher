@@ -17,16 +17,20 @@ public class DatasetEntry {
     private long eventTimeMs;
     private GtfsRealtime.FeedMessage feedMessage;
 
-    public static DatasetEntry newEntry(Message msg) throws Exception {
-        long dvjId = 0L;
-        String key = msg.getKey();
-        if (key != null && !key.isEmpty()) {
-            dvjId = Long.parseLong(key);
-        }
+    public static DatasetEntry newEntry(Message msg, DatasetBundler.DataType expectedType) throws Exception {
         long eventTimeMs = msg.getEventTime();
         GtfsRealtime.FeedMessage feedMessage = GtfsRealtime.FeedMessage.parseFrom(msg.getData());
-
-        return new DatasetEntry(dvjId, eventTimeMs, feedMessage);
+        if (expectedType == DatasetBundler.DataType.ServiceAlert) {
+            // No DVJ-ID for Service Alerts
+            return new DatasetEntry(0L, eventTimeMs, feedMessage);
+        }
+        else if (expectedType == DatasetBundler.DataType.TripUpdate) {
+            long dvjId = Long.parseLong(msg.getKey());
+            return new DatasetEntry(dvjId, eventTimeMs, feedMessage);
+        }
+        else {
+            throw new IllegalArgumentException("Invalid data type to expect" + expectedType);
+        }
     }
 
     public long getDvjId() {

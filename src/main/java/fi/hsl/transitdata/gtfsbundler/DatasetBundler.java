@@ -16,6 +16,10 @@ public abstract class DatasetBundler {
         local, azure
     }
 
+    public enum DataType {
+        TripUpdate, ServiceAlert
+    }
+
     protected DatasetBundler(Config config, ISink sink) {
         fileName = config.getString("bundler.output.fileName");
         this.sink = sink;
@@ -27,10 +31,20 @@ public abstract class DatasetBundler {
         ISink sink = null;
         if (destination == Destination.azure) {
             sink = AzureSink.newInstance(config);
-        } else {
+        } else if (destination == Destination.local) {
             sink = new LocalSink(config);
+        } else {
+            throw new IllegalArgumentException("Invalid Destination, should be local or azure");
         }
-        return new TripUpdateBundler(config, sink);
+
+        DataType type = DataType.valueOf(config.getString("bundler.dataType"));
+        if (type == DataType.ServiceAlert) {
+            return new ServiceAlertBundler(config, sink);
+        } else if (type == DataType.TripUpdate) {
+            return new TripUpdateBundler(config, sink);
+        } else {
+            throw new IllegalArgumentException("Invalid DataType, should be TripUpdate or ServiceAlert");
+        }
     }
 
     public abstract void bundle(List<DatasetEntry> newMessages) throws Exception;

@@ -22,12 +22,15 @@ public class MessageProcessor implements IMessageHandler {
 
     final List<DatasetEntry> inputQueue = new LinkedList<>();
     final DatasetBundler bundler;
+    final DatasetBundler.DataType dataType;
 
     private MessageProcessor(final PulsarApplication app, DatasetBundler bundler) {
 
         this.consumer = app.getContext().getConsumer();
         Config config = app.getContext().getConfig();
         this.bundler = bundler;
+        this.dataType = DatasetBundler.DataType.valueOf(config.getString("bundler.dataType"));
+        log.info("Reading data of type {} from topic {}", dataType, consumer.getTopic());
 
         long intervalInSecs = config.getDuration("bundler.dumpInterval", TimeUnit.SECONDS);
         log.info("Dump interval {} seconds", intervalInSecs);
@@ -106,7 +109,7 @@ public class MessageProcessor implements IMessageHandler {
     }
 
     private void handleFeedMessage(final Message msg) throws Exception {
-        DatasetEntry entry = DatasetEntry.newEntry(msg);
+        DatasetEntry entry = DatasetEntry.newEntry(msg, dataType);
         synchronized (inputQueue) {
             inputQueue.add(entry);
         }
