@@ -18,7 +18,7 @@ public class TripUpdatePublisher extends DatasetPublisher {
 
     protected TripUpdatePublisher(Config config, ISink sink) {
         super(config, sink);
-        maxAgeInMs = config.getDuration("bundler.maxAge", TimeUnit.MILLISECONDS);
+        maxAgeInMs = config.getDuration("bundler.tripUpdate.maxAge", TimeUnit.MILLISECONDS);
     }
 
     public void initialize() throws Exception {

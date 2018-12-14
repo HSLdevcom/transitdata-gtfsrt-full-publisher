@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.security.InvalidKeyException;
 import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
 
 public class AzureSink implements ISink {
     private static final Logger log = LoggerFactory.getLogger(AzureSink.class);
@@ -18,31 +19,34 @@ public class AzureSink implements ISink {
     private final String accountName;
     private final String accountKey;
     private final String containerName;
+    private final long cacheMaxAgeSeconds;
 
-    private AzureSink(String accountName, String accountKey, String containerName) {
+    private AzureSink(String accountName, String accountKey, String containerName, long cacheMaxAgeSecs) {
         this.accountName = accountName;
         this.accountKey = accountKey;
         this.containerName = containerName;
+        this.cacheMaxAgeSeconds = cacheMaxAgeSecs;
     }
 
     public static AzureSink newInstance(Config config) throws Exception {
         //TODO read from docker secrets
         String name = config.getString("bundler.output.azure.accountName");
         String container = config.getString("bundler.output.azure.containerName");
+        long maxAge = config.getDuration("bundler.cacheMaxAge", TimeUnit.SECONDS);
 
         //We'll use Docker secrets for getting the key
         String keyPath = config.getString("bundler.output.azure.accountKeyPath");
         String key = new Scanner(new File(keyPath)).useDelimiter("\\Z").next();
 
-        return new AzureSink(name, key, container);
+        return new AzureSink(name, key, container, maxAge);
     }
 
     @Override
     public void put(String name, byte[] data) throws Exception {
-        upload(name, data, containerName, accountName, accountKey);
+        upload(name, data, containerName, accountName, accountKey, cacheMaxAgeSeconds);
     }
 
-    private static void upload(String name, byte[] data, String containerName, String accountName, String accountKey) throws Exception {
+    private static void upload(String name, byte[] data, String containerName, String accountName, String accountKey, long cacheMaxAge) throws Exception {
         log.info("Uploading file {} with {} kB to Azure Blob storage", name, (data.length / 1024));
         final long startTime = System.currentTimeMillis();
         final String storageConnectionString = (new StringBuilder())
@@ -70,6 +74,7 @@ public class AzureSink implements ISink {
             CloudBlockBlob blob = container.getBlockBlobReference(name);
             log.debug("Got reference to CloudBlockBlob with name {}", blob.getName());
             blob.getProperties().setContentType("application/x-protobuf");
+            blob.getProperties().setCacheControl("max-age=" + Long.toString(cacheMaxAge));
 
             final InputStream inputStream = new ByteArrayInputStream(data);
             final int length = data.length;
