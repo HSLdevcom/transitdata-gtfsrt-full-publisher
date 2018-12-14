@@ -1,6 +1,7 @@
 package fi.hsl.transitdata.publisher;
 
 import com.typesafe.config.Config;
+import org.apache.pulsar.client.api.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +47,8 @@ public abstract class DatasetPublisher {
             throw new IllegalArgumentException("Invalid DataType, should be TripUpdate or ServiceAlert");
         }
     }
+
+    public abstract void bootstrap(Consumer consumer) throws Exception;
 
     public abstract void publish(List<DatasetEntry> newMessages) throws Exception;
 

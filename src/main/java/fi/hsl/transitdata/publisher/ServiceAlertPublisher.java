@@ -2,6 +2,8 @@ package fi.hsl.transitdata.publisher;
 
 import com.google.transit.realtime.GtfsRealtime;
 import com.typesafe.config.Config;
+import org.apache.pulsar.client.api.Consumer;
+import org.apache.pulsar.client.api.MessageId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,6 +16,11 @@ public class ServiceAlertPublisher extends DatasetPublisher {
 
     public ServiceAlertPublisher(Config config, ISink sink) {
         super(config, sink);
+    }
+
+    @Override
+    public void bootstrap(Consumer consumer) throws Exception {
+        consumer.seek(MessageId.earliest);
     }
 
     @Override

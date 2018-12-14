@@ -52,6 +52,7 @@ public class MessageProcessor implements IMessageHandler {
 
     public static MessageProcessor newInstance(final PulsarApplication app) throws Exception {
         DatasetPublisher publisher = DatasetPublisher.newInstance(app.getContext().getConfig());
+        publisher.bootstrap(app.getContext().getConsumer());
         return new MessageProcessor(app, publisher);
     }
 
