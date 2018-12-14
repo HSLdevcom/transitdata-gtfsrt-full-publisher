@@ -18,7 +18,6 @@ public abstract class DatasetPublisher {
     protected final ISink sink;
 
     private final long bootstrapPeriodInSecs;
-    private final String adminHttpUrl = "http://localhost:8080";
 
     public enum Destination {
         local, azure
@@ -56,17 +55,14 @@ public abstract class DatasetPublisher {
         }
     }
 
-    public void bootstrap(Consumer consumer) {
+    public void bootstrap(PulsarAdmin admin, Consumer consumer) {
         try {
-            PulsarAdmin admin = PulsarAdmin.builder()
-                    .serviceHttpUrl(adminHttpUrl)
-                    .build();
             long rewindTo = Instant.now().minus(bootstrapPeriodInSecs, ChronoUnit.SECONDS).toEpochMilli();
             log.info("Resetting Pulsar topic cursor with {} seconds to {} (epoch ms).", bootstrapPeriodInSecs, rewindTo);
             admin.topics().resetCursor(consumer.getTopic(), consumer.getSubscription(), rewindTo);
         }
         catch (Exception e) {
-            log.error("Failed to reset Pulsar cursor!", e);
+            log.error("Failed to bootstrap the service! Unable to set Pulsar Cursor?", e);
         }
     }
 
