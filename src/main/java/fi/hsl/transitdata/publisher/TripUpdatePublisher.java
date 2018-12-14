@@ -22,11 +22,6 @@ public class TripUpdatePublisher extends DatasetPublisher {
         maxAgeInMs = config.getDuration("bundler.tripUpdate.maxAge", TimeUnit.MILLISECONDS);
     }
 
-    @Override
-    public void bootstrap(Consumer consumer) throws Exception {
-        //TODO warm up the cache by reading the latest dump?
-    }
-
     public synchronized void publish(List<DatasetEntry> newMessages) throws Exception {
         if (newMessages.isEmpty()) {
             log.warn("No new messages to publish, ignoring.");

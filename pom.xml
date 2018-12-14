@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>fi.hsl.transitdata</groupId>
     <artifactId>transitdata-gtfsrt-full-publisher</artifactId>
-    <version>0.2.0</version>
+    <version>0.2.1</version>
     <packaging>jar</packaging>
 
     <properties>
@@ -31,6 +31,11 @@
             <groupId>com.microsoft.azure</groupId>
             <artifactId>azure-storage</artifactId>
             <version>5.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.pulsar</groupId>
+            <artifactId>pulsar-client-admin</artifactId>
+            <version>${pulsar.version}</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
