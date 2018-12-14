@@ -29,7 +29,6 @@ public class AzureSink implements ISink {
     }
 
     public static AzureSink newInstance(Config config) throws Exception {
-        //TODO read from docker secrets
         String name = config.getString("bundler.output.azure.accountName");
         String container = config.getString("bundler.output.azure.containerName");
         long maxAge = config.getDuration("bundler.cacheMaxAge", TimeUnit.SECONDS);
