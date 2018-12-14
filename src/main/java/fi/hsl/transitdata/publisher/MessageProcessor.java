@@ -3,6 +3,7 @@ package fi.hsl.transitdata.publisher;
 import com.typesafe.config.Config;
 import fi.hsl.common.pulsar.IMessageHandler;
 import fi.hsl.common.pulsar.PulsarApplication;
+import fi.hsl.common.pulsar.PulsarApplicationContext;
 import fi.hsl.common.transitdata.TransitdataProperties;
 import org.apache.pulsar.client.api.*;
 import org.slf4j.Logger;
@@ -51,7 +52,9 @@ public class MessageProcessor implements IMessageHandler {
     }
 
     public static MessageProcessor newInstance(final PulsarApplication app) throws Exception {
-        DatasetPublisher publisher = DatasetPublisher.newInstance(app.getContext().getConfig());
+        final PulsarApplicationContext context = app.getContext();
+        DatasetPublisher publisher = DatasetPublisher.newInstance(context.getConfig());
+        publisher.bootstrap(context.getAdmin(), context.getConsumer());
         return new MessageProcessor(app, publisher);
     }
 

@@ -2,6 +2,7 @@ package fi.hsl.transitdata.publisher;
 
 import com.google.transit.realtime.GtfsRealtime;
 import com.typesafe.config.Config;
+import org.apache.pulsar.client.api.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,10 +20,6 @@ public class TripUpdatePublisher extends DatasetPublisher {
     protected TripUpdatePublisher(Config config, ISink sink) {
         super(config, sink);
         maxAgeInMs = config.getDuration("bundler.tripUpdate.maxAge", TimeUnit.MILLISECONDS);
-    }
-
-    public void initialize() throws Exception {
-        //TODO warm up the cache by reading the latest dump?
     }
 
     public synchronized void publish(List<DatasetEntry> newMessages) throws Exception {
