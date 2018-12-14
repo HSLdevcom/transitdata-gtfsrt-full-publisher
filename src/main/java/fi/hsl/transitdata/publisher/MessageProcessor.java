@@ -1,4 +1,4 @@
-package fi.hsl.transitdata.gtfsbundler;
+package fi.hsl.transitdata.publisher;
 
 import com.typesafe.config.Config;
 import fi.hsl.common.pulsar.IMessageHandler;
@@ -21,15 +21,15 @@ public class MessageProcessor implements IMessageHandler {
     final ScheduledExecutorService scheduler;
 
     final List<DatasetEntry> inputQueue = new LinkedList<>();
-    final DatasetBundler bundler;
-    final DatasetBundler.DataType dataType;
+    final DatasetPublisher publisher;
+    final DatasetPublisher.DataType dataType;
 
-    private MessageProcessor(final PulsarApplication app, DatasetBundler bundler) {
+    private MessageProcessor(final PulsarApplication app, DatasetPublisher publisher) {
 
         this.consumer = app.getContext().getConsumer();
         Config config = app.getContext().getConfig();
-        this.bundler = bundler;
-        this.dataType = DatasetBundler.DataType.valueOf(config.getString("bundler.dataType"));
+        this.publisher = publisher;
+        this.dataType = DatasetPublisher.DataType.valueOf(config.getString("bundler.dataType"));
         log.info("Reading data of type {} from topic {}", dataType, consumer.getTopic());
 
         long intervalInSecs = config.getDuration("bundler.dumpInterval", TimeUnit.SECONDS);
@@ -51,8 +51,8 @@ public class MessageProcessor implements IMessageHandler {
     }
 
     public static MessageProcessor newInstance(final PulsarApplication app) throws Exception {
-        DatasetBundler bundler = DatasetBundler.newInstance(app.getContext().getConfig());
-        return new MessageProcessor(app, bundler);
+        DatasetPublisher publisher = DatasetPublisher.newInstance(app.getContext().getConfig());
+        return new MessageProcessor(app, publisher);
     }
 
     private static void closeApplication(PulsarApplication app, ScheduledExecutorService scheduler) {
@@ -70,10 +70,10 @@ public class MessageProcessor implements IMessageHandler {
 
         log.info("Dump-time, new messages: {}", copy.size());
         try {
-            bundler.bundle(copy);
+            publisher.publish(copy);
         }
         catch (Exception e) {
-            log.error("Failed to bundle Full GTFS-RT dataset", e);
+            log.error("Failed to publish Full GTFS-RT dataset", e);
             throw e;
         }
     }

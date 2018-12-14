@@ -24,6 +24,6 @@ FROM openjdk:8-jre-slim
 
 #This container can access the build artifacts inside the BUILD container.
 #Everything that is not copied is discarded
-COPY --from=BUILD /usr/src/app/target/transitdata-gtfs-bundler-jar-with-dependencies.jar /usr/app/transitdata-gtfs-bundler.jar
+COPY --from=BUILD /usr/src/app/target/transitdata-gtfsrt-full-publisher-jar-with-dependencies.jar /usr/app/transitdata-gtfsrt-full-publisher.jar
 
-ENTRYPOINT ["java", "-jar", "/usr/app/transitdata-gtfs-bundler.jar"]
+ENTRYPOINT ["java", "-jar", "/usr/app/transitdata-gtfsrt-full-publisher.jar"]

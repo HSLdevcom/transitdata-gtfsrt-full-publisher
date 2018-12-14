@@ -1,4 +1,4 @@
-package fi.hsl.transitdata.gtfsbundler;
+package fi.hsl.transitdata.publisher;
 
 import com.google.transit.realtime.GtfsRealtime;
 import com.typesafe.config.Config;
@@ -9,14 +9,14 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-public class TripUpdateBundler extends DatasetBundler {
-    private static final Logger log = LoggerFactory.getLogger(TripUpdateBundler.class);
+public class TripUpdatePublisher extends DatasetPublisher {
+    private static final Logger log = LoggerFactory.getLogger(TripUpdatePublisher.class);
 
     final HashMap<Long, DatasetEntry> cache = new HashMap<>();
     final long maxAgeInMs;
 
 
-    protected TripUpdateBundler(Config config, ISink sink) {
+    protected TripUpdatePublisher(Config config, ISink sink) {
         super(config, sink);
         maxAgeInMs = config.getDuration("bundler.tripUpdate.maxAge", TimeUnit.MILLISECONDS);
     }
@@ -25,14 +25,14 @@ public class TripUpdateBundler extends DatasetBundler {
         //TODO warm up the cache by reading the latest dump?
     }
 
-    public synchronized void bundle(List<DatasetEntry> newMessages) throws Exception {
+    public synchronized void publish(List<DatasetEntry> newMessages) throws Exception {
         if (newMessages.isEmpty()) {
-            log.warn("No new messages to bundle, ignoring.");
+            log.warn("No new messages to publish, ignoring.");
             return;
         }
 
         long startTime = System.currentTimeMillis();
-        log.info("Starting GTFS Full dataset bundling. Cache size: {}, new events: {}", cache.size(), newMessages.size());
+        log.info("Starting GTFS Full dataset publishing. Cache size: {}, new events: {}", cache.size(), newMessages.size());
 
         mergeEventsToCache(newMessages, cache);
         log.info("Cache size after merging: {}", cache.size());

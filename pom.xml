@@ -1,8 +1,8 @@
 <project>
     <modelVersion>4.0.0</modelVersion>
     <groupId>fi.hsl.transitdata</groupId>
-    <artifactId>transitdata-gtfs-bundler</artifactId>
-    <version>0.1.0</version>
+    <artifactId>transitdata-gtfsrt-full-publisher</artifactId>
+    <version>0.2.0</version>
     <packaging>jar</packaging>
 
     <properties>
@@ -42,7 +42,7 @@
     </dependencies>
 
     <build>
-        <finalName>transitdata-gtfs-bundler</finalName>
+        <finalName>transitdata-gtfsrt-full-publisher</finalName>
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
@@ -65,7 +65,7 @@
                             <archiveBaseDirectory>${project.basedir}</archiveBaseDirectory>
                             <archive>
                                 <manifest>
-                                    <mainClass>fi.hsl.transitdata.gtfsbundler.Main</mainClass>
+                                    <mainClass>fi.hsl.transitdata.publisher.Main</mainClass>
                                 </manifest>
                             </archive>
                             <descriptorRefs>

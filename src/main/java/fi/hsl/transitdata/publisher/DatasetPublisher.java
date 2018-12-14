@@ -1,4 +1,4 @@
-package fi.hsl.transitdata.gtfsbundler;
+package fi.hsl.transitdata.publisher;
 
 import com.typesafe.config.Config;
 import org.slf4j.Logger;
@@ -6,8 +6,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-public abstract class DatasetBundler {
-    private static final Logger log = LoggerFactory.getLogger(DatasetBundler.class);
+public abstract class DatasetPublisher {
+    private static final Logger log = LoggerFactory.getLogger(DatasetPublisher.class);
 
     protected final String fileName;
     protected final ISink sink;
@@ -20,12 +20,12 @@ public abstract class DatasetBundler {
         TripUpdate, ServiceAlert
     }
 
-    protected DatasetBundler(Config config, ISink sink) {
+    protected DatasetPublisher(Config config, ISink sink) {
         fileName = config.getString("bundler.output.fileName");
         this.sink = sink;
     }
 
-    public static DatasetBundler newInstance(Config config) throws Exception {
+    public static DatasetPublisher newInstance(Config config) throws Exception {
         Destination destination = Destination.valueOf(config.getString("bundler.output.destination"));
         log.info("Using file destination: {}", destination);
         ISink sink = null;
@@ -39,14 +39,14 @@ public abstract class DatasetBundler {
 
         DataType type = DataType.valueOf(config.getString("bundler.dataType"));
         if (type == DataType.ServiceAlert) {
-            return new ServiceAlertBundler(config, sink);
+            return new ServiceAlertPublisher(config, sink);
         } else if (type == DataType.TripUpdate) {
-            return new TripUpdateBundler(config, sink);
+            return new TripUpdatePublisher(config, sink);
         } else {
             throw new IllegalArgumentException("Invalid DataType, should be TripUpdate or ServiceAlert");
         }
     }
 
-    public abstract void bundle(List<DatasetEntry> newMessages) throws Exception;
+    public abstract void publish(List<DatasetEntry> newMessages) throws Exception;
 
 }
