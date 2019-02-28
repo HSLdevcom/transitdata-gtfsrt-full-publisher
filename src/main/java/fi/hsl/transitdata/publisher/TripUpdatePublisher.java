@@ -2,6 +2,7 @@ package fi.hsl.transitdata.publisher;
 
 import com.google.transit.realtime.GtfsRealtime;
 import com.typesafe.config.Config;
+import fi.hsl.common.gtfsrt.GtfsRtUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,7 +56,7 @@ public class TripUpdatePublisher extends DatasetPublisher {
         }
 
         final long nowInSecs = now / 1000;
-        GtfsRealtime.FeedMessage fullDump = createFeedMessage(entities, nowInSecs);
+        GtfsRealtime.FeedMessage fullDump = GtfsRtUtils.createFullFeedMessage(entities, nowInSecs);
 
         sink.put(fileName, fullDump.toByteArray());
 
@@ -91,17 +92,5 @@ public class TripUpdatePublisher extends DatasetPublisher {
                 .collect(Collectors.toList());
     }
 
-    static GtfsRealtime.FeedMessage createFeedMessage(List<GtfsRealtime.FeedEntity> entities, long timestampUtcSecs) {
-        GtfsRealtime.FeedHeader header = GtfsRealtime.FeedHeader.newBuilder()
-                .setGtfsRealtimeVersion("2.0")
-                .setIncrementality(GtfsRealtime.FeedHeader.Incrementality.FULL_DATASET)
-                .setTimestamp(timestampUtcSecs)
-                .build();
-
-        return GtfsRealtime.FeedMessage.newBuilder()
-                .addAllEntity(entities)
-                .setHeader(header)
-                .build();
-    }
 
 }
