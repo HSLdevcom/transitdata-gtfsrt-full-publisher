@@ -70,7 +70,7 @@ public class TripUpdatePublisher extends DatasetPublisher {
         //merge with previous entries. Only keep latest.
         newMessages.forEach(entry -> cache.put(entry.getDvjId(), entry));
     }
-
+    /*
     static void removeOldEntries(Map<Long, DatasetEntry> cache, long maxAgeInMs, long nowUtcMs) {
         Iterator<Map.Entry<Long, DatasetEntry>> it = cache.entrySet().iterator();
         while (it.hasNext()) {
@@ -82,6 +82,46 @@ public class TripUpdatePublisher extends DatasetPublisher {
                 it.remove();
             }
         }
+    }*/
+
+    static void removeOldEntries(Map<Long, DatasetEntry> cache, long keepAfterLastEventInMs, long nowUtcMs) {
+        final long maxAgeInMs = nowUtcMs + keepAfterLastEventInMs;
+
+        Iterator<Map.Entry<Long, DatasetEntry>> it = cache.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<Long, DatasetEntry> pair = it.next();
+
+            long ts = pair.getValue().getEventTimeUtcMs();
+            long age = nowUtcMs - ts;
+            if (age > maxAgeInMs) {
+                it.remove();
+            }
+        }
+    }
+
+    protected static Long findLatestTimestamp(GtfsRealtime.FeedMessage msg) {
+        Optional<Long> maxTimestamp = msg.getEntityList().stream().map(GtfsRealtime.FeedEntity::getTripUpdate)
+                .map(tu -> {
+                    return tu.getStopTimeUpdateList().stream().map(
+                            stu -> {
+                                long max = 0L;
+                                if (stu.hasArrival()) {
+                                    max = stu.getArrival().getTime();
+                                }
+                                if (stu.hasDeparture()) {
+                                    long departureTime = stu.getDeparture().getTime();
+                                    if (departureTime > max) {
+                                        max = departureTime;
+                                    }
+                                }
+                                return max;
+                            }
+                    ).max(Comparator.naturalOrder());
+                })
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .max(Comparator.naturalOrder());
+         return maxTimestamp.orElse(0L);
     }
 
     static List<GtfsRealtime.FeedEntity> getFeedEntities(Map<Long, DatasetEntry> state) {
