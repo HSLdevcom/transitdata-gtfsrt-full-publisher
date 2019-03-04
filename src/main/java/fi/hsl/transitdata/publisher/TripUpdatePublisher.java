@@ -69,19 +69,6 @@ public class TripUpdatePublisher extends DatasetPublisher {
         //merge with previous entries. Only keep latest.
         newMessages.forEach(entry -> cache.put(entry.getDvjId(), entry));
     }
-    /*
-    static void removeOldEntries(Map<Long, DatasetEntry> cache, long maxAgeInSecs, long nowUtcMs) {
-        Iterator<Map.Entry<Long, DatasetEntry>> it = cache.entrySet().iterator();
-        while (it.hasNext()) {
-            Map.Entry<Long, DatasetEntry> pair = it.next();
-
-            long ts = pair.getValue().getEventTimeUtcMs();
-            long age = nowUtcMs - ts;
-            if (age > maxAgeInSecs) {
-                it.remove();
-            }
-        }
-    }*/
 
     static void removeOldEntries(Map<Long, DatasetEntry> cache, long keepAfterLastEventInSecs, long nowInSecs) {
         Iterator<Map.Entry<Long, DatasetEntry>> it = cache.entrySet().iterator();
