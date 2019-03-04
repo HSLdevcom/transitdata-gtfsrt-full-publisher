@@ -6,10 +6,10 @@ import org.apache.pulsar.client.api.Message;
 import java.util.List;
 
 public class DatasetEntry {
-    private DatasetEntry(long id, long evetTimeMs, GtfsRealtime.FeedMessage feedMessage) {
+    private DatasetEntry(long id, long eventTimeMs, GtfsRealtime.FeedMessage feedMessage) {
         this.dvjId = id;
         this.feedMessage = feedMessage;
-        this.eventTimeMs = evetTimeMs;
+        this.eventTimeMs = eventTimeMs;
     }
 
     private long dvjId;
