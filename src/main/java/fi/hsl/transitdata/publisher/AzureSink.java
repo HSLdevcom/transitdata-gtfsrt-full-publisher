@@ -31,7 +31,7 @@ public class AzureSink implements ISink {
     public static AzureSink newInstance(Config config) throws Exception {
         String name = config.getString("bundler.output.azure.accountName");
         String container = config.getString("bundler.output.azure.containerName");
-        long maxAge = config.getDuration("bundler.cacheMaxAge", TimeUnit.SECONDS);
+        long maxAge = config.getDuration("bundler.output.azure.cacheMaxAge", TimeUnit.SECONDS);
 
         //We'll use Docker secrets for getting the key
         String keyPath = config.getString("bundler.output.azure.accountKeyPath");

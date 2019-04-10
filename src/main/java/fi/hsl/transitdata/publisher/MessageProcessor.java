@@ -4,6 +4,7 @@ import com.typesafe.config.Config;
 import fi.hsl.common.pulsar.IMessageHandler;
 import fi.hsl.common.pulsar.PulsarApplication;
 import fi.hsl.common.transitdata.TransitdataProperties;
+import fi.hsl.common.transitdata.TransitdataSchema;
 import org.apache.pulsar.client.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,10 +82,10 @@ public class MessageProcessor implements IMessageHandler {
     @Override
     public void handleMessage(final Message msg) throws Exception {
         try {
-            parseProtobufSchema(msg).ifPresent(schema -> {
+            TransitdataSchema.parseFromPulsarMessage(msg).ifPresent(schema -> {
                 try {
-                    if (schema == TransitdataProperties.ProtobufSchema.GTFS_TripUpdate ||
-                        schema == TransitdataProperties.ProtobufSchema.GTFS_ServiceAlert) {
+                    if (schema.schema == TransitdataProperties.ProtobufSchema.GTFS_TripUpdate ||
+                        schema.schema == TransitdataProperties.ProtobufSchema.GTFS_ServiceAlert) {
                         handleFeedMessage(msg);
                     }
                     else {
@@ -112,20 +113,6 @@ public class MessageProcessor implements IMessageHandler {
         DatasetEntry entry = DatasetEntry.newEntry(msg, dataType);
         synchronized (inputQueue) {
             inputQueue.add(entry);
-        }
-    }
-
-
-    private Optional<TransitdataProperties.ProtobufSchema> parseProtobufSchema(Message received) {
-        try {
-            String schemaType = received.getProperty(TransitdataProperties.KEY_PROTOBUF_SCHEMA);
-            log.debug("Received message with schema type " + schemaType);
-            TransitdataProperties.ProtobufSchema schema = TransitdataProperties.ProtobufSchema.fromString(schemaType);
-            return Optional.of(schema);
-        }
-        catch (Exception e) {
-            log.error("Failed to parse protobuf schema", e);
-            return Optional.empty();
         }
     }
 

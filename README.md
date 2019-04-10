@@ -4,6 +4,14 @@ Application for building GTFS-RT Full dataset from Pulsar TripUpdate or ServiceA
 Final bundle will be uploaded to remote file server. Currently supported is Azure Blob Storage. 
 There is an option also to save the file locally for easier debugging.
 
+Currently application has separate logic for publishing ServiceAlerts and TripUpdates. 
+- With ServiceAlerts we can just publish the latest FeedMessage since it contains the whole state
+- With TripUpdates we need to cache all incoming FeedMessages which contain information about a single trip.
+  - When publishing we aggregate FeedEntities from each FeedMessage and publish them under one FeedMessage 
+  - We also want to filter past events from the output feed (and the cache). 
+    - Currently we do this by filtering the entire FeedEntity once all events are old. We could also filter single TripUpdates once they deprecate?
+
+
 ## Building
 
 ### Dependencies

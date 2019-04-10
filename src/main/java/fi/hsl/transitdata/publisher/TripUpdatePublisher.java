@@ -2,6 +2,7 @@ package fi.hsl.transitdata.publisher;
 
 import com.google.transit.realtime.GtfsRealtime;
 import com.typesafe.config.Config;
+import fi.hsl.common.gtfsrt.FeedMessageFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,12 +14,12 @@ public class TripUpdatePublisher extends DatasetPublisher {
     private static final Logger log = LoggerFactory.getLogger(TripUpdatePublisher.class);
 
     final HashMap<Long, DatasetEntry> cache = new HashMap<>();
-    final long maxAgeInMs;
+    final long maxAgeInSecs;
 
 
     protected TripUpdatePublisher(Config config, ISink sink) {
         super(config, sink);
-        maxAgeInMs = config.getDuration("bundler.tripUpdate.maxAge", TimeUnit.MILLISECONDS);
+        maxAgeInSecs = config.getDuration("bundler.tripUpdate.contentMaxAge", TimeUnit.SECONDS);
     }
 
     public void initialize() throws Exception {
@@ -38,11 +39,11 @@ public class TripUpdatePublisher extends DatasetPublisher {
         log.info("Cache size after merging: {}", cache.size());
 
         //filter old ones out
-        log.info("Pruning cache, removing events older than {}", maxAgeInMs);
+        log.info("Pruning cache, removing events older than {} secs", maxAgeInSecs);
         int sizeBefore = cache.size();
 
-        final long now = System.currentTimeMillis();
-        removeOldEntries(cache, maxAgeInMs, now);
+        final long nowInSecs = System.currentTimeMillis() / 1000;
+        removeOldEntries(cache, maxAgeInSecs, nowInSecs);
         int sizeAfter = cache.size();
         log.info("Size before pruning {} and after {}", sizeBefore, sizeAfter);
 
@@ -54,8 +55,7 @@ public class TripUpdatePublisher extends DatasetPublisher {
             log.error("Cache size != entity-list size. Bug or is something strange happening here..?");
         }
 
-        final long nowInSecs = now / 1000;
-        GtfsRealtime.FeedMessage fullDump = createFeedMessage(entities, nowInSecs);
+        GtfsRealtime.FeedMessage fullDump = FeedMessageFactory.createFullFeedMessage(entities, nowInSecs);
 
         sink.put(fileName, fullDump.toByteArray());
 
@@ -70,17 +70,54 @@ public class TripUpdatePublisher extends DatasetPublisher {
         newMessages.forEach(entry -> cache.put(entry.getDvjId(), entry));
     }
 
-    static void removeOldEntries(Map<Long, DatasetEntry> cache, long maxAgeInMs, long nowUtcMs) {
+    static void removeOldEntries(Map<Long, DatasetEntry> cache, long keepAfterLastEventInSecs, long nowInSecs) {
         Iterator<Map.Entry<Long, DatasetEntry>> it = cache.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<Long, DatasetEntry> pair = it.next();
+            // Note! By filtering out the whole FeedMessage we assume that it only contains
+            // FeedEntities for a single trip. Currently this is so, but needs to be fixed if things change.
+            // Let's add a warning which should be monitored
+            GtfsRealtime.FeedMessage feedMessage = pair.getValue().getFeedMessage();
+            if (feedMessage.getEntityCount() != 1) {
+                log.error("FeedMessage entity count != 1. count: {}", feedMessage.getEntityCount());
+                for (GtfsRealtime.FeedEntity entity: feedMessage.getEntityList()) {
+                    log.debug("FeedEntity Id: {}", entity.getId());
+                }
+            }
 
-            long ts = pair.getValue().getEventTimeUtcMs();
-            long age = nowUtcMs - ts;
-            if (age > maxAgeInMs) {
+            long latestTimestampInFeedMessage = findLatestTimestamp(feedMessage);
+            long age = nowInSecs - latestTimestampInFeedMessage;
+            if (age > keepAfterLastEventInSecs) {
+                log.debug("Removing because age is {} s", age);
                 it.remove();
             }
         }
+    }
+
+    protected static Long findLatestTimestamp(GtfsRealtime.FeedMessage msg) {
+        Optional<Long> maxTimestamp = msg.getEntityList().stream()
+                .map(GtfsRealtime.FeedEntity::getTripUpdate)
+                .map(tu -> {
+                    return tu.getStopTimeUpdateList().stream().map(
+                            stu -> {
+                                long max = 0L;
+                                if (stu.hasArrival()) {
+                                    max = stu.getArrival().getTime();
+                                }
+                                if (stu.hasDeparture()) {
+                                    long departureTime = stu.getDeparture().getTime();
+                                    if (departureTime > max) {
+                                        max = departureTime;
+                                    }
+                                }
+                                return max;
+                            }
+                    ).max(Comparator.naturalOrder()); // Get latest timestamp of all StopTimeUpdates in this TripUpdate
+                })
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .max(Comparator.naturalOrder()); // Get latest timestamp of all TripUpdates in this FeedEntityList
+         return maxTimestamp.orElse(0L);
     }
 
     static List<GtfsRealtime.FeedEntity> getFeedEntities(Map<Long, DatasetEntry> state) {
@@ -91,17 +128,5 @@ public class TripUpdatePublisher extends DatasetPublisher {
                 .collect(Collectors.toList());
     }
 
-    static GtfsRealtime.FeedMessage createFeedMessage(List<GtfsRealtime.FeedEntity> entities, long timestampUtcSecs) {
-        GtfsRealtime.FeedHeader header = GtfsRealtime.FeedHeader.newBuilder()
-                .setGtfsRealtimeVersion("2.0")
-                .setIncrementality(GtfsRealtime.FeedHeader.Incrementality.FULL_DATASET)
-                .setTimestamp(timestampUtcSecs)
-                .build();
-
-        return GtfsRealtime.FeedMessage.newBuilder()
-                .addAllEntity(entities)
-                .setHeader(header)
-                .build();
-    }
 
 }
