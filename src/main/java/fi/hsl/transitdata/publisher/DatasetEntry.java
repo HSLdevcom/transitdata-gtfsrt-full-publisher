@@ -19,8 +19,8 @@ public class DatasetEntry {
     public static DatasetEntry newEntry(Message msg, DatasetPublisher.DataType expectedType) throws Exception {
         long eventTimeMs = msg.getEventTime();
         GtfsRealtime.FeedMessage feedMessage = GtfsRealtime.FeedMessage.parseFrom(msg.getData());
-        if (expectedType == DatasetPublisher.DataType.ServiceAlert) {
-            // No DVJ-ID for Service Alerts
+        if (expectedType == DatasetPublisher.DataType.ServiceAlert || expectedType == DatasetPublisher.DataType.VehiclePosition) {
+            // No DVJ-ID for Service Alerts or Vehicle Positions
             return new DatasetEntry(0L, eventTimeMs, feedMessage);
         }
         else if (expectedType == DatasetPublisher.DataType.TripUpdate) {

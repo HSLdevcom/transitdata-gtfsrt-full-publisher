@@ -17,7 +17,7 @@ public abstract class DatasetPublisher {
     }
 
     public enum DataType {
-        TripUpdate, ServiceAlert
+        TripUpdate, ServiceAlert, VehiclePosition
     }
 
     protected DatasetPublisher(Config config, ISink sink) {
@@ -42,6 +42,8 @@ public abstract class DatasetPublisher {
             return new ServiceAlertPublisher(config, sink);
         } else if (type == DataType.TripUpdate) {
             return new TripUpdatePublisher(config, sink);
+        } else if (type == DataType.VehiclePosition) {
+            return new VehiclePositionPublisher(config, sink);
         } else {
             throw new IllegalArgumentException("Invalid DataType, should be TripUpdate or ServiceAlert");
         }
