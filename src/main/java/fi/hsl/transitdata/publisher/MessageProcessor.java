@@ -85,7 +85,8 @@ public class MessageProcessor implements IMessageHandler {
             TransitdataSchema.parseFromPulsarMessage(msg).ifPresent(schema -> {
                 try {
                     if (schema.schema == TransitdataProperties.ProtobufSchema.GTFS_TripUpdate ||
-                        schema.schema == TransitdataProperties.ProtobufSchema.GTFS_ServiceAlert) {
+                        schema.schema == TransitdataProperties.ProtobufSchema.GTFS_ServiceAlert ||
+                        schema.schema == TransitdataProperties.ProtobufSchema.GTFS_VehiclePosition) {
                         handleFeedMessage(msg);
                     }
                     else {
