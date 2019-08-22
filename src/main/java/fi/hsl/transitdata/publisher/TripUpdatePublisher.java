@@ -67,7 +67,7 @@ public class TripUpdatePublisher extends DatasetPublisher {
         //Messages should already come sorted by event time but let's make sure, it doesn't cost much
         Collections.sort(newMessages, Comparator.comparingLong(DatasetEntry::getEventTimeUtcMs));
         //merge with previous entries. Only keep latest.
-        newMessages.forEach(entry -> cache.put(entry.getDvjId(), entry));
+        newMessages.forEach(entry -> cache.put(entry.getId(), entry));
     }
 
     static void removeOldEntries(Map<Long, DatasetEntry> cache, long keepAfterLastEventInSecs, long nowInSecs) {
