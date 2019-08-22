@@ -6,13 +6,13 @@ import org.apache.pulsar.client.api.Message;
 import java.util.List;
 
 public class DatasetEntry {
-    private DatasetEntry(long id, long eventTimeMs, GtfsRealtime.FeedMessage feedMessage) {
+    private DatasetEntry(String id, long eventTimeMs, GtfsRealtime.FeedMessage feedMessage) {
         this.id = id;
         this.feedMessage = feedMessage;
         this.eventTimeMs = eventTimeMs;
     }
 
-    private long id;
+    private String id;
     private long eventTimeMs;
     private GtfsRealtime.FeedMessage feedMessage;
 
@@ -21,10 +21,10 @@ public class DatasetEntry {
         GtfsRealtime.FeedMessage feedMessage = GtfsRealtime.FeedMessage.parseFrom(msg.getData());
         if (expectedType == DatasetPublisher.DataType.ServiceAlert || expectedType == DatasetPublisher.DataType.VehiclePosition) {
             // No ID for Service Alerts or Vehicle Positions
-            return new DatasetEntry(0L, eventTimeMs, feedMessage);
+            return new DatasetEntry(null, eventTimeMs, feedMessage);
         }
         else if (expectedType == DatasetPublisher.DataType.TripUpdate) {
-            long id = Long.parseLong(msg.getKey());
+            String id = msg.getKey();
             return new DatasetEntry(id, eventTimeMs, feedMessage);
         }
         else {
@@ -32,7 +32,7 @@ public class DatasetEntry {
         }
     }
 
-    public long getId() {
+    public String getId() {
         return id;
     }
 
