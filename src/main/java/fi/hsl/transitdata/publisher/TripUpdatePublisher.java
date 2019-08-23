@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 public class TripUpdatePublisher extends DatasetPublisher {
     private static final Logger log = LoggerFactory.getLogger(TripUpdatePublisher.class);
 
-    final HashMap<Long, DatasetEntry> cache = new HashMap<>();
+    final HashMap<String, DatasetEntry> cache = new HashMap<>();
     final long maxAgeInSecs;
 
 
@@ -63,17 +63,17 @@ public class TripUpdatePublisher extends DatasetPublisher {
         log.info("Bundling done in {} ms", elapsed);
     }
 
-    static void mergeEventsToCache(List<DatasetEntry> newMessages, Map<Long, DatasetEntry> cache) {
+    static void mergeEventsToCache(List<DatasetEntry> newMessages, Map<String, DatasetEntry> cache) {
         //Messages should already come sorted by event time but let's make sure, it doesn't cost much
         Collections.sort(newMessages, Comparator.comparingLong(DatasetEntry::getEventTimeUtcMs));
         //merge with previous entries. Only keep latest.
-        newMessages.forEach(entry -> cache.put(entry.getDvjId(), entry));
+        newMessages.forEach(entry -> cache.put(entry.getId(), entry));
     }
 
-    static void removeOldEntries(Map<Long, DatasetEntry> cache, long keepAfterLastEventInSecs, long nowInSecs) {
-        Iterator<Map.Entry<Long, DatasetEntry>> it = cache.entrySet().iterator();
+    static void removeOldEntries(Map<String, DatasetEntry> cache, long keepAfterLastEventInSecs, long nowInSecs) {
+        Iterator<Map.Entry<String, DatasetEntry>> it = cache.entrySet().iterator();
         while (it.hasNext()) {
-            Map.Entry<Long, DatasetEntry> pair = it.next();
+            Map.Entry<String, DatasetEntry> pair = it.next();
             // Note! By filtering out the whole FeedMessage we assume that it only contains
             // FeedEntities for a single trip. Currently this is so, but needs to be fixed if things change.
             // Let's add a warning which should be monitored
@@ -120,7 +120,7 @@ public class TripUpdatePublisher extends DatasetPublisher {
          return maxTimestamp.orElse(0L);
     }
 
-    static List<GtfsRealtime.FeedEntity> getFeedEntities(Map<Long, DatasetEntry> state) {
+    static List<GtfsRealtime.FeedEntity> getFeedEntities(Map<String, DatasetEntry> state) {
         return state.values().stream()
                 .sorted(Comparator.comparingLong(DatasetEntry::getEventTimeUtcMs).reversed()) // Sort by event time, latest first
                 .map(DatasetEntry::getEntities)
