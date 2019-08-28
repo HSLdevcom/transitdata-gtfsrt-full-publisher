@@ -20,10 +20,15 @@ public class TripUpdatePublisher extends DatasetPublisher {
     final HashMap<String, DatasetEntry> cache = new HashMap<>();
     final long maxAgeInSecs;
 
+    private final long maxAgeAfterStartSecs;
+    private final ZoneId timezone;
 
     protected TripUpdatePublisher(Config config, ISink sink) {
         super(config, sink);
         maxAgeInSecs = config.getDuration("bundler.tripUpdate.contentMaxAge", TimeUnit.SECONDS);
+
+        maxAgeAfterStartSecs = config.getDuration("bundler.tripUpdate.maxAgeAfterStart", TimeUnit.SECONDS);
+        timezone = ZoneId.of(config.getString("bundler.tripUpdate.timezone"));
     }
 
     public void initialize() throws Exception {
@@ -74,7 +79,7 @@ public class TripUpdatePublisher extends DatasetPublisher {
         newMessages.forEach(entry -> cache.put(entry.getId(), entry));
     }
 
-    static void removeOldEntries(Map<String, DatasetEntry> cache, long keepAfterLastEventInSecs, long nowInSecs) {
+    private void removeOldEntries(Map<String, DatasetEntry> cache, long keepAfterLastEventInSecs, long nowInSecs) {
         Iterator<Map.Entry<String, DatasetEntry>> it = cache.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<String, DatasetEntry> pair = it.next();
@@ -98,7 +103,7 @@ public class TripUpdatePublisher extends DatasetPublisher {
         }
     }
 
-    protected static Long findLatestTimestamp(GtfsRealtime.FeedMessage msg) {
+    private long findLatestTimestamp(GtfsRealtime.FeedMessage msg) {
         Optional<Long> maxTimestamp = msg.getEntityList().stream()
                 .map(GtfsRealtime.FeedEntity::getTripUpdate)
                 .map(tu -> {
@@ -106,12 +111,12 @@ public class TripUpdatePublisher extends DatasetPublisher {
                     if (tu.getStopTimeUpdateList().isEmpty()) {
                         String[] time = tu.getTrip().getStartTime().split(":");
                         ZonedDateTime tripStartTime = LocalDate.parse(tu.getTrip().getStartDate(), DateTimeFormatter.BASIC_ISO_DATE)
-                                .atStartOfDay(ZoneId.of("Europe/Helsinki"))
+                                .atStartOfDay(timezone)
                                 .plusHours(Long.parseLong(time[0]))
                                 .plusMinutes(Long.parseLong(time[1]))
                                 .plusSeconds(Long.parseLong(time[2]));
 
-                        return Optional.of(tripStartTime.plusHours(2).toEpochSecond());
+                        return Optional.of(tripStartTime.plusSeconds(maxAgeAfterStartSecs).toEpochSecond());
                     }
 
                     return tu.getStopTimeUpdateList().stream().map(
