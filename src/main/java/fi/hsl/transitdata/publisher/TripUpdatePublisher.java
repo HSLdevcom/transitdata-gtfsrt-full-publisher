@@ -6,6 +6,10 @@ import fi.hsl.common.gtfsrt.FeedMessageFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -98,6 +102,18 @@ public class TripUpdatePublisher extends DatasetPublisher {
         Optional<Long> maxTimestamp = msg.getEntityList().stream()
                 .map(GtfsRealtime.FeedEntity::getTripUpdate)
                 .map(tu -> {
+                    //If trip update has no stop time updates, use trip start time + 2h for "latest timestamp"
+                    if (tu.getStopTimeUpdateList().isEmpty()) {
+                        String[] time = tu.getTrip().getStartTime().split(":");
+                        ZonedDateTime tripStartTime = LocalDate.parse(tu.getTrip().getStartDate(), DateTimeFormatter.BASIC_ISO_DATE)
+                                .atStartOfDay(ZoneId.of("Europe/Helsinki"))
+                                .plusHours(Long.parseLong(time[0]))
+                                .plusMinutes(Long.parseLong(time[1]))
+                                .plusSeconds(Long.parseLong(time[2]));
+
+                        return Optional.of(tripStartTime.plusHours(2).toEpochSecond());
+                    }
+
                     return tu.getStopTimeUpdateList().stream().map(
                             stu -> {
                                 long max = 0L;
