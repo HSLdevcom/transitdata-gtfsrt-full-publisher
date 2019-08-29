@@ -100,7 +100,7 @@ public class TripUpdatePublisher extends DatasetPublisher {
                                 tripUpdate.getTrip().hasScheduleRelationship() &&
                                 tripUpdate.getTrip().getScheduleRelationship() == GtfsRealtime.TripDescriptor.ScheduleRelationship.CANCELED) {
                             //If trip update has no stop time updates, use trip start time + certain duration for expiration time when the trip update will be removed from the feed
-                            return getExpirationTimeForCancellation(tripUpdate);
+                            return getExpirationTimeForCancellation(tripUpdate, timezone, maxAgeAfterStartSecs);
                         } else {
                             return getLatestTimestampFromStopTimeUpdates(tripUpdate);
                         }
@@ -118,7 +118,7 @@ public class TripUpdatePublisher extends DatasetPublisher {
         });
     }
 
-    private long getExpirationTimeForCancellation(GtfsRealtime.TripUpdate tu) {
+    static long getExpirationTimeForCancellation(GtfsRealtime.TripUpdate tu, ZoneId timezone, long maxAgeAfterStartSecs) {
         String[] time = tu.getTrip().getStartTime().split(":");
         ZonedDateTime tripStartTime = LocalDate.parse(tu.getTrip().getStartDate(), DateTimeFormatter.BASIC_ISO_DATE)
                 .atStartOfDay(timezone)
@@ -129,7 +129,7 @@ public class TripUpdatePublisher extends DatasetPublisher {
         return tripStartTime.plusSeconds(maxAgeAfterStartSecs).toEpochSecond();
     }
 
-    private long getLatestTimestampFromStopTimeUpdates(GtfsRealtime.TripUpdate tu) {
+    static long getLatestTimestampFromStopTimeUpdates(GtfsRealtime.TripUpdate tu) {
         return tu.getStopTimeUpdateList().stream()
                 .map(stopTimeUpdate -> Math.max(stopTimeUpdate.hasArrival() ? stopTimeUpdate.getArrival().getTime() : 0, stopTimeUpdate.hasDeparture() ? stopTimeUpdate.getDeparture().getTime() : 0))
                 .max(Comparator.naturalOrder())
