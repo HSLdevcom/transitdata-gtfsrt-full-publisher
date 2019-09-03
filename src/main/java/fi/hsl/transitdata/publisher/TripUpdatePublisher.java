@@ -6,6 +6,10 @@ import fi.hsl.common.gtfsrt.FeedMessageFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -16,10 +20,15 @@ public class TripUpdatePublisher extends DatasetPublisher {
     final HashMap<String, DatasetEntry> cache = new HashMap<>();
     final long maxAgeInSecs;
 
+    private final long maxAgeAfterStartSecs;
+    private final ZoneId timezone;
 
     protected TripUpdatePublisher(Config config, ISink sink) {
         super(config, sink);
         maxAgeInSecs = config.getDuration("bundler.tripUpdate.contentMaxAge", TimeUnit.SECONDS);
+
+        maxAgeAfterStartSecs = config.getDuration("bundler.tripUpdate.maxAgeAfterStart", TimeUnit.SECONDS);
+        timezone = ZoneId.of(config.getString("bundler.tripUpdate.timezone"));
     }
 
     public void initialize() throws Exception {
@@ -70,14 +79,12 @@ public class TripUpdatePublisher extends DatasetPublisher {
         newMessages.forEach(entry -> cache.put(entry.getId(), entry));
     }
 
-    static void removeOldEntries(Map<String, DatasetEntry> cache, long keepAfterLastEventInSecs, long nowInSecs) {
-        Iterator<Map.Entry<String, DatasetEntry>> it = cache.entrySet().iterator();
-        while (it.hasNext()) {
-            Map.Entry<String, DatasetEntry> pair = it.next();
+    private void removeOldEntries(Map<String, DatasetEntry> cache, long keepAfterLastEventInSecs, long nowInSecs) {
+        cache.values().removeIf(datasetEntry -> {
             // Note! By filtering out the whole FeedMessage we assume that it only contains
             // FeedEntities for a single trip. Currently this is so, but needs to be fixed if things change.
             // Let's add a warning which should be monitored
-            GtfsRealtime.FeedMessage feedMessage = pair.getValue().getFeedMessage();
+            GtfsRealtime.FeedMessage feedMessage = datasetEntry.getFeedMessage();
             if (feedMessage.getEntityCount() != 1) {
                 log.error("FeedMessage entity count != 1. count: {}", feedMessage.getEntityCount());
                 for (GtfsRealtime.FeedEntity entity: feedMessage.getEntityList()) {
@@ -85,39 +92,48 @@ public class TripUpdatePublisher extends DatasetPublisher {
                 }
             }
 
-            long latestTimestampInFeedMessage = findLatestTimestamp(feedMessage);
-            long age = nowInSecs - latestTimestampInFeedMessage;
+            long expirationTime = feedMessage.getEntityList().stream()
+                    .filter(GtfsRealtime.FeedEntity::hasTripUpdate)
+                    .map(GtfsRealtime.FeedEntity::getTripUpdate)
+                    .map(tripUpdate -> {
+                        if (tripUpdate.getStopTimeUpdateList().isEmpty() &&
+                                tripUpdate.getTrip().hasScheduleRelationship() &&
+                                tripUpdate.getTrip().getScheduleRelationship() == GtfsRealtime.TripDescriptor.ScheduleRelationship.CANCELED) {
+                            //If trip update has no stop time updates, use trip start time + certain duration for expiration time when the trip update will be removed from the feed
+                            return getExpirationTimeForCancellation(tripUpdate, timezone, maxAgeAfterStartSecs);
+                        } else {
+                            return getLatestTimestampFromStopTimeUpdates(tripUpdate);
+                        }
+                    })
+                    .max(Comparator.naturalOrder())
+                    .orElse(0L);
+
+            long age = nowInSecs - expirationTime;
             if (age > keepAfterLastEventInSecs) {
                 log.debug("Removing because age is {} s", age);
-                it.remove();
+                return true;
+            } else {
+                return false;
             }
-        }
+        });
     }
 
-    protected static Long findLatestTimestamp(GtfsRealtime.FeedMessage msg) {
-        Optional<Long> maxTimestamp = msg.getEntityList().stream()
-                .map(GtfsRealtime.FeedEntity::getTripUpdate)
-                .map(tu -> {
-                    return tu.getStopTimeUpdateList().stream().map(
-                            stu -> {
-                                long max = 0L;
-                                if (stu.hasArrival()) {
-                                    max = stu.getArrival().getTime();
-                                }
-                                if (stu.hasDeparture()) {
-                                    long departureTime = stu.getDeparture().getTime();
-                                    if (departureTime > max) {
-                                        max = departureTime;
-                                    }
-                                }
-                                return max;
-                            }
-                    ).max(Comparator.naturalOrder()); // Get latest timestamp of all StopTimeUpdates in this TripUpdate
-                })
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .max(Comparator.naturalOrder()); // Get latest timestamp of all TripUpdates in this FeedEntityList
-         return maxTimestamp.orElse(0L);
+    static long getExpirationTimeForCancellation(GtfsRealtime.TripUpdate tu, ZoneId timezone, long maxAgeAfterStartSecs) {
+        String[] time = tu.getTrip().getStartTime().split(":");
+        ZonedDateTime tripStartTime = LocalDate.parse(tu.getTrip().getStartDate(), DateTimeFormatter.BASIC_ISO_DATE)
+                .atStartOfDay(timezone)
+                .plusHours(Long.parseLong(time[0]))
+                .plusMinutes(Long.parseLong(time[1]))
+                .plusSeconds(Long.parseLong(time[2]));
+
+        return tripStartTime.plusSeconds(maxAgeAfterStartSecs).toEpochSecond();
+    }
+
+    static long getLatestTimestampFromStopTimeUpdates(GtfsRealtime.TripUpdate tu) {
+        return tu.getStopTimeUpdateList().stream()
+                .map(stopTimeUpdate -> Math.max(stopTimeUpdate.hasArrival() ? stopTimeUpdate.getArrival().getTime() : 0, stopTimeUpdate.hasDeparture() ? stopTimeUpdate.getDeparture().getTime() : 0))
+                .max(Comparator.naturalOrder())
+                .orElse(0L);
     }
 
     static List<GtfsRealtime.FeedEntity> getFeedEntities(Map<String, DatasetEntry> state) {
