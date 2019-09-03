@@ -59,7 +59,7 @@ public class VehiclePositionPublisher extends DatasetPublisher {
     }
 
     static void mergeVehiclePositionsToCache(List<DatasetEntry> entries, Map<String, GtfsRealtime.FeedEntity> cache) {
-        Collections.sort(entries, Comparator.comparingLong(DatasetEntry::getEventTimeUtcMs));
+        entries.sort(Comparator.comparingLong(DatasetEntry::getEventTimeUtcMs));
 
         entries.forEach(entry -> {
             if (entry.getEntities().size() != 1) {
@@ -72,7 +72,15 @@ public class VehiclePositionPublisher extends DatasetPublisher {
             }
 
             GtfsRealtime.FeedEntity entity = entry.getEntities().get(0);
-            cache.put(entity.getVehicle().getVehicle().getId(), entity);
+            cache.compute(entity.getVehicle().getVehicle().getId(), (key, prevEntity) -> {
+                if (prevEntity != null && prevEntity.getVehicle().getTimestamp() > entity.getVehicle().getTimestamp()) {
+                    logger.warn("Vehicle position {} had older timestamp than previously published vehicle position", entity.getVehicle().getVehicle().getId());
+
+                    return prevEntity;
+                } else {
+                    return entity;
+                }
+            });
         });
     }
 }
