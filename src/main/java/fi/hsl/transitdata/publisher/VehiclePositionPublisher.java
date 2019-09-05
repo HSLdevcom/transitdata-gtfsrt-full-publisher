@@ -61,6 +61,8 @@ public class VehiclePositionPublisher extends DatasetPublisher {
     static void mergeVehiclePositionsToCache(List<DatasetEntry> entries, Map<String, GtfsRealtime.FeedEntity> cache) {
         entries.sort(Comparator.comparingLong(DatasetEntry::getEventTimeUtcMs));
 
+        Set<String> vehiclesThatHadOlderTimestamp = new HashSet<>();
+
         entries.forEach(entry -> {
             if (entry.getEntities().size() != 1) {
                 logger.warn("FeedMessage had unexpected amount of entities (!= 1), entity count: {}", entry.getEntities().size());
@@ -74,13 +76,14 @@ public class VehiclePositionPublisher extends DatasetPublisher {
             GtfsRealtime.FeedEntity entity = entry.getEntities().get(0);
             cache.compute(entity.getVehicle().getVehicle().getId(), (key, prevEntity) -> {
                 if (prevEntity != null && prevEntity.getVehicle().getTimestamp() > entity.getVehicle().getTimestamp()) {
-                    logger.warn("Vehicle position {} had older timestamp than previously published vehicle position", entity.getVehicle().getVehicle().getId());
-
+                    vehiclesThatHadOlderTimestamp.add(prevEntity.getVehicle().getVehicle().getId());
                     return prevEntity;
                 } else {
                     return entity;
                 }
             });
         });
+
+        logger.warn("Vehicles [ {} ] has timestamp older than previously published vehicle position", String.join(", ", vehiclesThatHadOlderTimestamp));
     }
 }
