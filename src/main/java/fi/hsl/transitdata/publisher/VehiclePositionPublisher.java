@@ -74,9 +74,9 @@ public class VehiclePositionPublisher extends DatasetPublisher {
             }
 
             GtfsRealtime.FeedEntity entity = entry.getEntities().get(0);
-            cache.compute(entity.getVehicle().getVehicle().getId(), (key, prevEntity) -> {
+            cache.compute(entity.getVehicle().getVehicle().getId(), (vehicleId, prevEntity) -> {
                 if (prevEntity != null && prevEntity.getVehicle().getTimestamp() > entity.getVehicle().getTimestamp()) {
-                    vehiclesThatHadOlderTimestamp.add(prevEntity.getVehicle().getVehicle().getId());
+                    vehiclesThatHadOlderTimestamp.add(vehicleId);
                     return prevEntity;
                 } else {
                     return entity;
@@ -84,6 +84,8 @@ public class VehiclePositionPublisher extends DatasetPublisher {
             });
         });
 
-        logger.warn("Vehicles [ {} ] has timestamp older than previously published vehicle position", String.join(", ", vehiclesThatHadOlderTimestamp));
+        if (!vehiclesThatHadOlderTimestamp.isEmpty()) {
+            logger.warn("Vehicles [ {} ] had timestamp older than previously published vehicle position", String.join(", ", vehiclesThatHadOlderTimestamp));
+        }
     }
 }
