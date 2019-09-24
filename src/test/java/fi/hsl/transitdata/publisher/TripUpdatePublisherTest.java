@@ -27,4 +27,40 @@ public class TripUpdatePublisherTest {
 
         assertEquals(dateTime.toEpochSecond(), TripUpdatePublisher.getExpirationTimeForCancellation(tripUpdate, ZoneId.of("UTC"), maxAge));
     }
+
+    @Test
+    public void testTimestampIsUpdatedForCancellation() {
+        GtfsRealtime.TripUpdate tripUpdate = GtfsRealtime.TripUpdate.newBuilder()
+                .setTimestamp(0)
+                .setTrip(GtfsRealtime.TripDescriptor.newBuilder()
+                        .setTripId("trip_1")
+                        .setDirectionId(1)
+                        .setStartDate("20000101")
+                        .setStartTime("06:45:00")
+                        .setRouteId("route_1")
+                        .setScheduleRelationship(GtfsRealtime.TripDescriptor.ScheduleRelationship.CANCELED))
+                .build();
+
+        GtfsRealtime.FeedEntity feedEntity = GtfsRealtime.FeedEntity.newBuilder().setTripUpdate(tripUpdate).setId("entity_1").build();
+
+        assertEquals(10000, TripUpdatePublisher.updateCancellationTimestamp(feedEntity, 10000).getTripUpdate().getTimestamp());
+    }
+
+    @Test
+    public void testTimestampIsNotUpdatedForScheduledTU() {
+        GtfsRealtime.TripUpdate tripUpdate = GtfsRealtime.TripUpdate.newBuilder()
+                .setTimestamp(0)
+                .setTrip(GtfsRealtime.TripDescriptor.newBuilder()
+                        .setTripId("trip_1")
+                        .setDirectionId(1)
+                        .setStartDate("20000101")
+                        .setStartTime("06:45:00")
+                        .setRouteId("route_1")
+                        .setScheduleRelationship(GtfsRealtime.TripDescriptor.ScheduleRelationship.SCHEDULED))
+                .build();
+
+        GtfsRealtime.FeedEntity feedEntity = GtfsRealtime.FeedEntity.newBuilder().setTripUpdate(tripUpdate).setId("entity_1").build();
+
+        assertEquals(0, TripUpdatePublisher.updateCancellationTimestamp(feedEntity, 10000).getTripUpdate().getTimestamp());
+    }
 }
