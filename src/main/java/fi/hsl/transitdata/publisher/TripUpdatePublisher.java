@@ -64,6 +64,9 @@ public class TripUpdatePublisher extends DatasetPublisher {
             log.error("Cache size != entity-list size. Bug or is something strange happening here..?");
         }
 
+        //Update cancellation entity timestamps so that Google does not discard them as too old
+        entities = entities.stream().map(entity -> updateCancellationTimestamp(entity, nowInSecs)).collect(Collectors.toList());
+
         GtfsRealtime.FeedMessage fullDump = FeedMessageFactory.createFullFeedMessage(entities, nowInSecs);
 
         sink.put(fileName, fullDump.toByteArray());
@@ -144,5 +147,14 @@ public class TripUpdatePublisher extends DatasetPublisher {
                 .collect(Collectors.toList());
     }
 
-
+    static GtfsRealtime.FeedEntity updateCancellationTimestamp(GtfsRealtime.FeedEntity feedEntity, long timeInSecs) {
+        if (feedEntity.hasTripUpdate() &&
+            feedEntity.getTripUpdate().hasTrip() &&
+            feedEntity.getTripUpdate().getTrip().hasScheduleRelationship() &&
+            feedEntity.getTripUpdate().getTrip().getScheduleRelationship() == GtfsRealtime.TripDescriptor.ScheduleRelationship.CANCELED) {
+            return feedEntity.toBuilder().setTripUpdate(feedEntity.getTripUpdate().toBuilder().setTimestamp(timeInSecs)).build();
+        } else {
+            return feedEntity;
+        }
+    }
 }
