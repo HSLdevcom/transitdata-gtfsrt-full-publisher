@@ -63,9 +63,9 @@ public class MessageProcessor implements IMessageHandler {
     }
 
     private void dump() throws Exception {
-        List<DatasetEntry> copy = new LinkedList<>();
+        List<DatasetEntry> copy;
         synchronized (inputQueue) {
-            copy.addAll(inputQueue);
+            copy = new ArrayList<>(inputQueue);
             inputQueue.clear();
         }
 
