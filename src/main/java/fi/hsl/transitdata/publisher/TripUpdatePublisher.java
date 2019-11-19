@@ -3,6 +3,7 @@ package fi.hsl.transitdata.publisher;
 import com.google.transit.realtime.GtfsRealtime;
 import com.typesafe.config.Config;
 import fi.hsl.common.gtfsrt.FeedMessageFactory;
+import fi.hsl.common.transitdata.RouteIdUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,12 +24,16 @@ public class TripUpdatePublisher extends DatasetPublisher {
     private final long maxAgeAfterStartSecs;
     private final ZoneId timezone;
 
+    private final ContentType contentType;
+
     protected TripUpdatePublisher(Config config, ISink sink) {
         super(config, sink);
         maxAgeInSecs = config.getDuration("bundler.tripUpdate.contentMaxAge", TimeUnit.SECONDS);
 
         maxAgeAfterStartSecs = config.getDuration("bundler.tripUpdate.maxAgeAfterStart", TimeUnit.SECONDS);
         timezone = ZoneId.of(config.getString("bundler.tripUpdate.timezone"));
+
+        contentType = ContentType.valueOf(config.getString("bundler.tripUpdate.contentType"));
     }
 
     public void initialize() throws Exception {
@@ -67,6 +72,11 @@ public class TripUpdatePublisher extends DatasetPublisher {
         //Update cancellation entity timestamps so that Google does not discard them as too old
         entities = entities.stream().map(entity -> updateCancellationTimestamp(entity, nowInSecs)).collect(Collectors.toList());
 
+        if (contentType == ContentType.google) {
+            //Filter trip updates to publish only trip updates that Google wants
+            entities = filterTripUpdatesForGoogle(entities);
+        }
+
         GtfsRealtime.FeedMessage fullDump = FeedMessageFactory.createFullFeedMessage(entities, nowInSecs);
 
         sink.put(fileName, fullDump.toByteArray());
@@ -80,6 +90,18 @@ public class TripUpdatePublisher extends DatasetPublisher {
         Collections.sort(newMessages, Comparator.comparingLong(DatasetEntry::getEventTimeUtcMs));
         //merge with previous entries. Only keep latest.
         newMessages.forEach(entry -> cache.put(entry.getId(), entry));
+    }
+
+    static List<GtfsRealtime.FeedEntity> filterTripUpdatesForGoogle(List<GtfsRealtime.FeedEntity> feedEntities) {
+        return feedEntities.stream().filter(feedEntity -> {
+            return feedEntity.hasTripUpdate() &&
+                    feedEntity.getTripUpdate().hasTrip() &&
+                    feedEntity.getTripUpdate().getTrip().hasScheduleRelationship() &&
+                    feedEntity.getTripUpdate().getTrip().hasRouteId() &&
+                    (feedEntity.getTripUpdate().getTrip().getScheduleRelationship() == GtfsRealtime.TripDescriptor.ScheduleRelationship.CANCELED ||
+                            RouteIdUtils.isMetroRoute(feedEntity.getTripUpdate().getTrip().getRouteId()) ||
+                            RouteIdUtils.isTrainRoute(feedEntity.getTripUpdate().getTrip().getRouteId()));
+        }).collect(Collectors.toList());
     }
 
     private void removeOldEntries(Map<String, DatasetEntry> cache, long keepAfterLastEventInSecs, long nowInSecs) {
@@ -156,5 +178,10 @@ public class TripUpdatePublisher extends DatasetPublisher {
         } else {
             return feedEntity;
         }
+    }
+
+    public enum ContentType {
+        full, //Publish all trip updates
+        google //Publish all trip updates for metros and trains and only cancellations for other transport modes
     }
 }

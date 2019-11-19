@@ -5,6 +5,7 @@ import org.junit.Test;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.Arrays;
 
 import static org.junit.Assert.assertEquals;
 
@@ -62,5 +63,72 @@ public class TripUpdatePublisherTest {
         GtfsRealtime.FeedEntity feedEntity = GtfsRealtime.FeedEntity.newBuilder().setTripUpdate(tripUpdate).setId("entity_1").build();
 
         assertEquals(0, TripUpdatePublisher.updateCancellationTimestamp(feedEntity, 10000).getTripUpdate().getTimestamp());
+    }
+
+    @Test
+    public void testScheduledBusTripUpdatesAreFilteredForGoogle() {
+        GtfsRealtime.TripUpdate tripUpdate = GtfsRealtime.TripUpdate.newBuilder()
+                .setTimestamp(0)
+                .setTrip(GtfsRealtime.TripDescriptor.newBuilder()
+                        .setTripId("trip_1")
+                        .setDirectionId(1)
+                        .setStartDate("20000101")
+                        .setStartTime("06:45:00")
+                        .setRouteId("2550")
+                        .setScheduleRelationship(GtfsRealtime.TripDescriptor.ScheduleRelationship.SCHEDULED))
+                .build();
+
+        GtfsRealtime.FeedEntity feedEntity = GtfsRealtime.FeedEntity.newBuilder().setTripUpdate(tripUpdate).setId("entity_1").build();
+
+        assertEquals(0, TripUpdatePublisher.filterTripUpdatesForGoogle(Arrays.asList(feedEntity)).size());
+    }
+
+    @Test
+    public void testCanceledBusTripUpdatesAreNotFilteredForGoogle() {
+        GtfsRealtime.TripUpdate tripUpdate = GtfsRealtime.TripUpdate.newBuilder()
+                .setTimestamp(0)
+                .setTrip(GtfsRealtime.TripDescriptor.newBuilder()
+                        .setTripId("trip_1")
+                        .setDirectionId(1)
+                        .setStartDate("20000101")
+                        .setStartTime("06:45:00")
+                        .setRouteId("2550")
+                        .setScheduleRelationship(GtfsRealtime.TripDescriptor.ScheduleRelationship.CANCELED))
+                .build();
+
+        GtfsRealtime.FeedEntity feedEntity = GtfsRealtime.FeedEntity.newBuilder().setTripUpdate(tripUpdate).setId("entity_1").build();
+
+        assertEquals(1, TripUpdatePublisher.filterTripUpdatesForGoogle(Arrays.asList(feedEntity)).size());
+    }
+
+    @Test
+    public void testScheduledMetroAndTrainTripUpdatesAreNotFilteredForGoogle() {
+        GtfsRealtime.TripUpdate tripUpdate1 = GtfsRealtime.TripUpdate.newBuilder()
+                .setTimestamp(0)
+                .setTrip(GtfsRealtime.TripDescriptor.newBuilder()
+                        .setTripId("trip_1")
+                        .setDirectionId(1)
+                        .setStartDate("20000101")
+                        .setStartTime("06:45:00")
+                        .setRouteId("31M1")
+                        .setScheduleRelationship(GtfsRealtime.TripDescriptor.ScheduleRelationship.SCHEDULED))
+                .build();
+
+        GtfsRealtime.FeedEntity feedEntity1 = GtfsRealtime.FeedEntity.newBuilder().setTripUpdate(tripUpdate1).setId("entity_1").build();
+
+        GtfsRealtime.TripUpdate tripUpdate2 = GtfsRealtime.TripUpdate.newBuilder()
+                .setTimestamp(0)
+                .setTrip(GtfsRealtime.TripDescriptor.newBuilder()
+                        .setTripId("trip_2")
+                        .setDirectionId(1)
+                        .setStartDate("20000101")
+                        .setStartTime("06:45:00")
+                        .setRouteId("3001P")
+                        .setScheduleRelationship(GtfsRealtime.TripDescriptor.ScheduleRelationship.SCHEDULED))
+                .build();
+
+        GtfsRealtime.FeedEntity feedEntity2 = GtfsRealtime.FeedEntity.newBuilder().setTripUpdate(tripUpdate2).setId("entity_2").build();
+
+        assertEquals(2, TripUpdatePublisher.filterTripUpdatesForGoogle(Arrays.asList(feedEntity1, feedEntity2)).size());
     }
 }
