@@ -84,7 +84,7 @@ public class TripUpdatePublisherTest {
     }
 
     @Test
-    public void testScheduledBusTripUpdatesAreNotFilteredForGoogle() {
+    public void testCanceledBusTripUpdatesAreNotFilteredForGoogle() {
         GtfsRealtime.TripUpdate tripUpdate = GtfsRealtime.TripUpdate.newBuilder()
                 .setTimestamp(0)
                 .setTrip(GtfsRealtime.TripDescriptor.newBuilder()
