@@ -3,11 +3,13 @@ package fi.hsl.transitdata.publisher;
 import com.google.transit.realtime.GtfsRealtime;
 import com.typesafe.config.Config;
 import fi.hsl.common.gtfsrt.FeedMessageFactory;
+import fi.hsl.common.transitdata.RouteIdUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class VehiclePositionPublisher extends DatasetPublisher {
     private static final Logger logger = LoggerFactory.getLogger(VehiclePositionPublisher.class);
@@ -15,10 +17,12 @@ public class VehiclePositionPublisher extends DatasetPublisher {
     private Map<String, GtfsRealtime.FeedEntity> vehiclePositionCache = new HashMap<>(1000);
 
     private long maxAgeInSecs;
+    private ContentType type;
 
     public VehiclePositionPublisher(Config config, ISink sink) {
         super(config, sink);
         maxAgeInSecs = config.getDuration("bundler.vehiclePosition.contentMaxAge", TimeUnit.SECONDS);
+        type = ContentType.valueOf(config.getString("bundler.vehiclePosition.contentType"));
     }
 
     @Override
@@ -51,11 +55,27 @@ public class VehiclePositionPublisher extends DatasetPublisher {
 
         logger.info("Cache size before: {}, after: {}", cacheSizeBefore, vehiclePositionCache.size());
 
-        GtfsRealtime.FeedMessage vehiclePositionDump = FeedMessageFactory.createFullFeedMessage(new ArrayList<>(vehiclePositionCache.values()), currentTimeSecs);
+        List<GtfsRealtime.FeedEntity> filteredFeedEntities = filterVehiclePositionsForGoogle(vehiclePositionCache.values(), type == ContentType.full || type == ContentType.bustram, type == ContentType.full || type == ContentType.trainmetro);
+
+        GtfsRealtime.FeedMessage vehiclePositionDump = FeedMessageFactory.createFullFeedMessage(filteredFeedEntities, currentTimeSecs);
 
         sink.put(fileName, vehiclePositionDump.toByteArray());
 
         logger.info("Vehicle positions published in {}ms", System.currentTimeMillis() - startTime);
+    }
+
+    static List<GtfsRealtime.FeedEntity> filterVehiclePositionsForGoogle(Collection<GtfsRealtime.FeedEntity> entities, boolean busesAndTrams, boolean metrosAndTrains) {
+        return entities.stream().filter(entity -> {
+            GtfsRealtime.VehiclePosition vehiclePosition = entity.getVehicle();
+            String routeId = vehiclePosition.getTrip().getRouteId();
+            if (busesAndTrams && metrosAndTrains) {
+                return true;
+            }
+            if (busesAndTrams && !RouteIdUtils.isMetroRoute(routeId) && !RouteIdUtils.isTrainRoute(routeId)) {
+                return true;
+            }
+            return metrosAndTrains && (RouteIdUtils.isTrainRoute(routeId) || RouteIdUtils.isMetroRoute(routeId));
+        }).collect(Collectors.toList());
     }
 
     static void mergeVehiclePositionsToCache(List<DatasetEntry> entries, Map<String, GtfsRealtime.FeedEntity> cache) {
@@ -87,5 +107,11 @@ public class VehiclePositionPublisher extends DatasetPublisher {
         if (!vehiclesThatHadOlderTimestamp.isEmpty()) {
             logger.warn("Vehicles [ {} ] had timestamp older than previously published vehicle position", String.join(", ", vehiclesThatHadOlderTimestamp));
         }
+    }
+
+    public enum ContentType {
+        full,
+        bustram,
+        trainmetro
     }
 }
