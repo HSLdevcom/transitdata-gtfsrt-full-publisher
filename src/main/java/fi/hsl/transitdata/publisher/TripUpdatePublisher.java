@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -87,7 +88,7 @@ public class TripUpdatePublisher extends DatasetPublisher {
 
     static void mergeEventsToCache(List<DatasetEntry> newMessages, Map<String, DatasetEntry> cache) {
         //Messages should already come sorted by event time but let's make sure, it doesn't cost much
-        Collections.sort(newMessages, Comparator.comparingLong(DatasetEntry::getEventTimeUtcMs));
+        newMessages.sort(Comparator.comparingLong(DatasetEntry::getEventTimeUtcMs));
         //merge with previous entries. Only keep latest.
         newMessages.forEach(entry -> cache.put(entry.getId(), entry));
     }
@@ -121,11 +122,9 @@ public class TripUpdatePublisher extends DatasetPublisher {
                     .filter(GtfsRealtime.FeedEntity::hasTripUpdate)
                     .map(GtfsRealtime.FeedEntity::getTripUpdate)
                     .map(tripUpdate -> {
-                        if (tripUpdate.getStopTimeUpdateList().isEmpty() &&
-                                tripUpdate.getTrip().hasScheduleRelationship() &&
-                                tripUpdate.getTrip().getScheduleRelationship() == GtfsRealtime.TripDescriptor.ScheduleRelationship.CANCELED) {
-                            //If trip update has no stop time updates, use trip start time + certain duration for expiration time when the trip update will be removed from the feed
-                            return getExpirationTimeForCancellation(tripUpdate, timezone, maxAgeAfterStartSecs);
+                        if (shouldUseExpirationTime(tripUpdate)) {
+                            //If trip has no stop time updates with timestamps, use trip start time + certain duration for expiration time when the trip update will be removed from the feed
+                            return getExpirationTime(tripUpdate, timezone, maxAgeAfterStartSecs);
                         } else {
                             return getLatestTimestampFromStopTimeUpdates(tripUpdate);
                         }
@@ -143,13 +142,29 @@ public class TripUpdatePublisher extends DatasetPublisher {
         });
     }
 
-    static long getExpirationTimeForCancellation(GtfsRealtime.TripUpdate tu, ZoneId timezone, long maxAgeAfterStartSecs) {
+    static boolean shouldUseExpirationTime(GtfsRealtime.TripUpdate tripUpdate) {
+        //Trip is cancelled and has no stop time updates
+        if (tripUpdate.getStopTimeUpdateCount() == 0 &&
+                tripUpdate.getTrip().hasScheduleRelationship() &&
+                tripUpdate.getTrip().getScheduleRelationship() == GtfsRealtime.TripDescriptor.ScheduleRelationship.CANCELED) {
+            return true;
+        }
+
+        //Trip update has only stop cancellations
+        return tripUpdate.getStopTimeUpdateList()
+                .stream()
+                .map(GtfsRealtime.TripUpdate.StopTimeUpdate::getScheduleRelationship)
+                .allMatch(scheduleRelationship -> {
+                    return scheduleRelationship == GtfsRealtime.TripUpdate.StopTimeUpdate.ScheduleRelationship.SKIPPED ||
+                            scheduleRelationship == GtfsRealtime.TripUpdate.StopTimeUpdate.ScheduleRelationship.NO_DATA;
+                });
+    }
+
+    static long getExpirationTime(GtfsRealtime.TripUpdate tu, ZoneId timezone, long maxAgeAfterStartSecs) {
         String[] time = tu.getTrip().getStartTime().split(":");
         ZonedDateTime tripStartTime = LocalDate.parse(tu.getTrip().getStartDate(), DateTimeFormatter.BASIC_ISO_DATE)
-                .atStartOfDay(timezone)
-                .plusHours(Long.parseLong(time[0]))
-                .plusMinutes(Long.parseLong(time[1]))
-                .plusSeconds(Long.parseLong(time[2]));
+                .atTime(LocalTime.of(Integer.parseInt(time[0]), Integer.parseInt(time[1]), Integer.parseInt(time[2])))
+                .atZone(timezone);
 
         return tripStartTime.plusSeconds(maxAgeAfterStartSecs).toEpochSecond();
     }
