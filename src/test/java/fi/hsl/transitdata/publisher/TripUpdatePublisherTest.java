@@ -26,7 +26,7 @@ public class TripUpdatePublisherTest {
         long maxAge = 2 * 60 * 60;
         ZonedDateTime dateTime = ZonedDateTime.of(2000, 1, 1, 6, 45, 0, 0, ZoneId.of("UTC")).plusSeconds(maxAge);
 
-        assertEquals(dateTime.toEpochSecond(), TripUpdatePublisher.getExpirationTimeForCancellation(tripUpdate, ZoneId.of("UTC"), maxAge));
+        assertEquals(dateTime.toEpochSecond(), TripUpdatePublisher.getExpirationTime(tripUpdate, ZoneId.of("UTC"), maxAge));
     }
 
     @Test
