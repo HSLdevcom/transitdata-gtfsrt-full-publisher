@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -142,6 +143,22 @@ public class TripUpdatePublisher extends DatasetPublisher {
         });
     }
 
+    static long getExpirationTime(GtfsRealtime.TripUpdate tu, ZoneId timezone, long maxAgeAfterStartSecs) {
+        final LocalDate date = LocalDate.parse(tu.getTrip().getStartDate(), DateTimeFormatter.BASIC_ISO_DATE);
+
+        final String[] timeParts = tu.getTrip().getStartTime().split(":");
+        final int hours = Integer.parseInt(timeParts[0]);
+        final int minutes = Integer.parseInt(timeParts[1]);
+        final int seconds = Integer.parseInt(timeParts[2]);
+
+        final LocalDateTime localDateTime = hours >= 24 ?
+                date.plusDays(1).atTime(hours - 24, minutes, seconds) :
+                date.atTime(hours, minutes, seconds);
+
+        final ZonedDateTime tripStartTime = localDateTime.atZone(timezone);
+        return tripStartTime.plusSeconds(maxAgeAfterStartSecs).toEpochSecond();
+    }
+      
     static boolean shouldUseExpirationTime(GtfsRealtime.TripUpdate tripUpdate) {
         //Trip is cancelled and has no stop time updates
         if (tripUpdate.getStopTimeUpdateCount() == 0 &&
@@ -158,15 +175,6 @@ public class TripUpdatePublisher extends DatasetPublisher {
                     return scheduleRelationship == GtfsRealtime.TripUpdate.StopTimeUpdate.ScheduleRelationship.SKIPPED ||
                             scheduleRelationship == GtfsRealtime.TripUpdate.StopTimeUpdate.ScheduleRelationship.NO_DATA;
                 });
-    }
-
-    static long getExpirationTime(GtfsRealtime.TripUpdate tu, ZoneId timezone, long maxAgeAfterStartSecs) {
-        String[] time = tu.getTrip().getStartTime().split(":");
-        ZonedDateTime tripStartTime = LocalDate.parse(tu.getTrip().getStartDate(), DateTimeFormatter.BASIC_ISO_DATE)
-                .atTime(LocalTime.of(Integer.parseInt(time[0]), Integer.parseInt(time[1]), Integer.parseInt(time[2])))
-                .atZone(timezone);
-
-        return tripStartTime.plusSeconds(maxAgeAfterStartSecs).toEpochSecond();
     }
 
     static long getLatestTimestampFromStopTimeUpdates(GtfsRealtime.TripUpdate tu) {
