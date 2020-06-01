@@ -7,7 +7,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Arrays;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 public class TripUpdatePublisherTest {
     @Test
@@ -130,5 +130,35 @@ public class TripUpdatePublisherTest {
         GtfsRealtime.FeedEntity feedEntity2 = GtfsRealtime.FeedEntity.newBuilder().setTripUpdate(tripUpdate2).setId("entity_2").build();
 
         assertEquals(2, TripUpdatePublisher.filterTripUpdatesForGoogle(Arrays.asList(feedEntity1, feedEntity2)).size());
+    }
+
+    @Test
+    public void testHasData() {
+        GtfsRealtime.TripUpdate withData = GtfsRealtime.TripUpdate.newBuilder()
+                .setTimestamp(0)
+                .setTrip(GtfsRealtime.TripDescriptor.newBuilder()
+                        .setTripId("1")
+                        .build())
+                .addStopTimeUpdate(GtfsRealtime.TripUpdate.StopTimeUpdate.newBuilder()
+                        .setStopId("1")
+                        .setDeparture(GtfsRealtime.TripUpdate.StopTimeEvent.newBuilder().setDelay(0).build())
+                        .setScheduleRelationship(GtfsRealtime.TripUpdate.StopTimeUpdate.ScheduleRelationship.SCHEDULED)
+                        .build())
+                .build();
+
+        assertTrue(TripUpdatePublisher.hasData(withData));
+
+        GtfsRealtime.TripUpdate noData = GtfsRealtime.TripUpdate.newBuilder()
+                .setTimestamp(0)
+                .setTrip(GtfsRealtime.TripDescriptor.newBuilder()
+                        .setTripId("1")
+                        .build())
+                .addStopTimeUpdate(GtfsRealtime.TripUpdate.StopTimeUpdate.newBuilder()
+                        .setStopId("1")
+                        .setScheduleRelationship(GtfsRealtime.TripUpdate.StopTimeUpdate.ScheduleRelationship.NO_DATA)
+                        .build())
+                .build();
+
+        assertFalse(TripUpdatePublisher.hasData(noData));
     }
 }
