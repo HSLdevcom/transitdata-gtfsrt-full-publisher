@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -122,6 +121,7 @@ public class TripUpdatePublisher extends DatasetPublisher {
             long expirationTime = feedMessage.getEntityList().stream()
                     .filter(GtfsRealtime.FeedEntity::hasTripUpdate)
                     .map(GtfsRealtime.FeedEntity::getTripUpdate)
+                    .filter(TripUpdatePublisher::hasData) //Filter trip updates that have only stop times updates with NO_DATA
                     .map(tripUpdate -> {
                         if (shouldUseExpirationTime(tripUpdate)) {
                             //If trip has no stop time updates with timestamps, use trip start time + certain duration for expiration time when the trip update will be removed from the feed
@@ -141,6 +141,12 @@ public class TripUpdatePublisher extends DatasetPublisher {
                 return false;
             }
         });
+    }
+
+    static boolean hasData(GtfsRealtime.TripUpdate tu) {
+        return tu.getStopTimeUpdateList().stream()
+                .anyMatch(stopTimeUpdate -> !stopTimeUpdate.hasScheduleRelationship() || //No schedule relationship -> defaults to SCHEDULED
+                        stopTimeUpdate.getScheduleRelationship() != GtfsRealtime.TripUpdate.StopTimeUpdate.ScheduleRelationship.NO_DATA);
     }
 
     static long getExpirationTime(GtfsRealtime.TripUpdate tu, ZoneId timezone, long maxAgeAfterStartSecs) {
