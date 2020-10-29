@@ -12,6 +12,7 @@ import java.io.*;
 import java.security.InvalidKeyException;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class AzureSink implements ISink {
     private static final Logger log = LoggerFactory.getLogger(AzureSink.class);
@@ -20,6 +21,8 @@ public class AzureSink implements ISink {
     private final String accountKey;
     private final String containerName;
     private final long cacheMaxAgeSeconds;
+
+    private AtomicLong lastPublishTime = new AtomicLong(System.nanoTime());
 
     private AzureSink(String accountName, String accountKey, String containerName, long cacheMaxAgeSecs) {
         this.accountName = accountName;
@@ -43,6 +46,12 @@ public class AzureSink implements ISink {
     @Override
     public void put(String name, byte[] data) throws Exception {
         upload(name, data, containerName, accountName, accountKey, cacheMaxAgeSeconds);
+        lastPublishTime.set(System.nanoTime());
+    }
+
+    @Override
+    public long getLastPublishTime() {
+        return lastPublishTime.get();
     }
 
     private static void upload(String name, byte[] data, String containerName, String accountName, String accountKey, long cacheMaxAge) throws Exception {
@@ -73,7 +82,7 @@ public class AzureSink implements ISink {
             CloudBlockBlob blob = container.getBlockBlobReference(name);
             log.debug("Got reference to CloudBlockBlob with name {}", blob.getName());
             blob.getProperties().setContentType("application/x-protobuf");
-            blob.getProperties().setCacheControl("max-age=" + Long.toString(cacheMaxAge));
+            blob.getProperties().setCacheControl("max-age=" + cacheMaxAge);
 
             final InputStream inputStream = new ByteArrayInputStream(data);
             final int length = data.length;
@@ -87,22 +96,17 @@ public class AzureSink implements ISink {
             for (ListBlobItem blobItem : container.listBlobs()) {
                 log.info(blobItem.getUri().toString());
             }
-
-        }
-        catch (InvalidKeyException ex) {
+        } catch (InvalidKeyException ex) {
             log.error("Invalid Azure key", ex);
             throw ex;
-        }
-        catch (StorageException ex) {
+        } catch (StorageException ex) {
             log.error("Error returned from the service. Http code: {} and error code: {}", ex.getHttpStatusCode(), ex.getErrorCode());
             log.warn("Full stack trace", ex);
             throw ex;
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             log.error("Unknown exception while uploading file to storage", ex);
             throw ex;
-        }
-        finally {
+        } finally {
             long now = System.currentTimeMillis();
             log.info("Upload finished in {} ms", (now - startTime));
         }
