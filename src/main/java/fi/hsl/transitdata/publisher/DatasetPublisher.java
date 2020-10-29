@@ -51,4 +51,7 @@ public abstract class DatasetPublisher {
 
     public abstract void publish(List<DatasetEntry> newMessages) throws Exception;
 
+    public long getLastPublishTime() {
+        return sink.getLastPublishTime();
+    }
 }

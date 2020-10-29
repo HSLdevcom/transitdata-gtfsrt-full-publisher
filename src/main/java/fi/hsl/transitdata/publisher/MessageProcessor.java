@@ -18,20 +18,24 @@ public class MessageProcessor implements IMessageHandler {
 
     private static final Logger log = LoggerFactory.getLogger(MessageProcessor.class);
 
-    private Consumer<byte[]> consumer;
+    private final Consumer<byte[]> consumer;
     final ScheduledExecutorService scheduler;
 
     final List<DatasetEntry> inputQueue = new LinkedList<>();
     final DatasetPublisher publisher;
     final DatasetPublisher.DataType dataType;
 
-    private MessageProcessor(final PulsarApplication app, DatasetPublisher publisher) {
+    final long unhealthyTimeout;
 
+    private MessageProcessor(final PulsarApplication app, DatasetPublisher publisher) {
         this.consumer = app.getContext().getConsumer();
+
         Config config = app.getContext().getConfig();
         this.publisher = publisher;
         this.dataType = DatasetPublisher.DataType.valueOf(config.getString("bundler.dataType"));
         log.info("Reading data of type {} from topic {}", dataType, consumer.getTopic());
+
+        unhealthyTimeout = config.getDuration("health.unhealthyTimeout", TimeUnit.NANOSECONDS);
 
         long intervalInSecs = config.getDuration("bundler.dumpInterval", TimeUnit.SECONDS);
         log.info("Dump interval {} seconds", intervalInSecs);
@@ -49,6 +53,10 @@ public class MessageProcessor implements IMessageHandler {
             }
         }, intervalInSecs, intervalInSecs, TimeUnit.SECONDS);
 
+        //Add health check if health checks have been enabled
+        if (app.getContext().getHealthServer() != null) {
+            app.getContext().getHealthServer().addCheck(() -> System.nanoTime() - publisher.getLastPublishTime() > unhealthyTimeout);
+        }
     }
 
     public static MessageProcessor newInstance(final PulsarApplication app) throws Exception {
