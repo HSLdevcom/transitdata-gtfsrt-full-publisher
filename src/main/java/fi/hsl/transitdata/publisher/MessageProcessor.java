@@ -55,7 +55,16 @@ public class MessageProcessor implements IMessageHandler {
 
         //Add health check if health checks have been enabled
         if (app.getContext().getHealthServer() != null) {
-            app.getContext().getHealthServer().addCheck(() -> System.nanoTime() - publisher.getLastPublishTime() > unhealthyTimeout);
+            app.getContext().getHealthServer().addCheck(() -> {
+                final long lastPublishedDelta = System.nanoTime() - publisher.getLastPublishTime();
+                final boolean healthy = lastPublishedDelta < unhealthyTimeout;
+
+                if (!healthy) {
+                    log.warn("Service unhealthy, data was last published {} seconds ago", lastPublishedDelta / 1_000_000_000);
+                }
+
+                return healthy;
+            });
         }
     }
 
