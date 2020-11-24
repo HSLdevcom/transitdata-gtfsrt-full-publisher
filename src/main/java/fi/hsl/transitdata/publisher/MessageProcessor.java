@@ -13,6 +13,7 @@ import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class MessageProcessor implements IMessageHandler {
 
@@ -26,6 +27,11 @@ public class MessageProcessor implements IMessageHandler {
     final DatasetPublisher.DataType dataType;
 
     final long unhealthyTimeout;
+
+    /**
+     * Time when the last message was received, used for health check
+     */
+    private final AtomicLong lastReceivedTime = new AtomicLong(System.nanoTime());
 
     private MessageProcessor(final PulsarApplication app, DatasetPublisher publisher) {
         this.consumer = app.getContext().getConsumer();
@@ -56,11 +62,17 @@ public class MessageProcessor implements IMessageHandler {
         //Add health check if health checks have been enabled
         if (app.getContext().getHealthServer() != null) {
             app.getContext().getHealthServer().addCheck(() -> {
-                final long lastPublishedDelta = System.nanoTime() - publisher.getLastPublishTime();
+                final long lastReceived = lastReceivedTime.get();
+                final long lastPublished = publisher.getLastPublishTime();
+
+                final long lastPublishedDelta = lastReceived - lastPublished;
                 final boolean healthy = lastPublishedDelta < unhealthyTimeout;
 
                 if (!healthy) {
-                    log.warn("Service unhealthy, data was last published {} seconds ago", lastPublishedDelta / 1_000_000_000);
+                    final long now = System.nanoTime();
+                    log.warn("Service unhealthy: data was last published {} seconds ago, but last received {} seconds ago",
+                            (now - lastPublished) / 1_000_000_000,
+                            (now - lastReceived) / 1_000_000_000);
                 }
 
                 return healthy;
@@ -98,6 +110,8 @@ public class MessageProcessor implements IMessageHandler {
 
     @Override
     public void handleMessage(final Message msg) throws Exception {
+        lastReceivedTime.set(System.nanoTime());
+
         try {
             TransitdataSchema.parseFromPulsarMessage(msg).ifPresent(schema -> {
                 try {
