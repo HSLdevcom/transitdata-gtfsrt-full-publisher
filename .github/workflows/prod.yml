@@ -25,11 +25,12 @@ jobs:
   build-docker-image:
     needs: test
     runs-on: ubuntu-latest
-    - uses: actions/checkout@v2
-    - name: Build and publish Docker image
-      uses: elgohr/Publish-Docker-Github-Action@master
-      with:
-        name: hsldevcom/transitdata-gtfsrt-full-publisher
-        username: ${{ secrets.DOCKER_USER }}
-        password: ${{ secrets.DOCKER_TOKEN }}
-        tag_semver: true
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build and publish Docker image
+        uses: elgohr/Publish-Docker-Github-Action@master
+        with:
+          name: hsldevcom/transitdata-gtfsrt-full-publisher
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+          tag_semver: true
