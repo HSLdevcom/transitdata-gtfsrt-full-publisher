@@ -1,9 +1,6 @@
-name: Test and create Docker image for develop branch
+name: Test and create Docker image
 
-on:
-  push:
-    branches:
-    - develop
+on: [push, pull_request]
 
 jobs:
   test:
@@ -22,15 +19,31 @@ jobs:
           restore-keys: ${{ runner.os }}-m2
       - name: Build with Maven
         run: mvn --file pom.xml clean install
-  build-docker-image:
+  build-develop-docker-image:
     needs: test
     runs-on: ubuntu-latest
+    # Run only on develop branch
+    if: github.ref == 'refs/heads/develop'
     steps:
       - uses: actions/checkout@v2
-      - name: Build and publish Docker image
+      - name: Build and publish develop Docker image
         uses: elgohr/Publish-Docker-Github-Action@master
         with:
           name: hsldevcom/transitdata-gtfsrt-full-publisher
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_TOKEN }}
           tags: develop
+  build-release-docker-image:
+    needs: test
+    runs-on: ubuntu-latest
+    # Run only for tagged commits
+    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build and publish release Docker image
+        uses: elgohr/Publish-Docker-Github-Action@master
+        with:
+          name: hsldevcom/transitdata-gtfsrt-full-publisher
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+          tag_semver: true
