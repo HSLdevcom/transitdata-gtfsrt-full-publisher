@@ -2,8 +2,6 @@ name: Test and create Docker image
 
 on: [push, pull_request]
 
-
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -37,7 +35,7 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: transitdata-gtfsrt-full-publisher.jar
-          path: target/transitdata-gtfsrt-full-publisher.jar
+          path: target
       - name: Build and publish develop Docker image
         uses: elgohr/Publish-Docker-Github-Action@master
         with:
@@ -56,7 +54,7 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: transitdata-gtfsrt-full-publisher.jar
-          path: target/transitdata-gtfsrt-full-publisher.jar
+          path: target
       - name: Build and publish release Docker image
         uses: elgohr/Publish-Docker-Github-Action@master
         with:
