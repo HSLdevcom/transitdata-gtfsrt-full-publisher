@@ -144,6 +144,11 @@ public class TripUpdatePublisher extends DatasetPublisher {
     }
 
     static boolean hasData(GtfsRealtime.TripUpdate tu) {
+        //Canceled trips should not be filtered out even if they have no stop time updates
+        if (tu.getTrip().getScheduleRelationship() == GtfsRealtime.TripDescriptor.ScheduleRelationship.CANCELED) {
+            return true;
+        }
+
         return tu.getStopTimeUpdateList().stream()
                 .anyMatch(stopTimeUpdate -> !stopTimeUpdate.hasScheduleRelationship() || //No schedule relationship -> defaults to SCHEDULED
                         stopTimeUpdate.getScheduleRelationship() != GtfsRealtime.TripUpdate.StopTimeUpdate.ScheduleRelationship.NO_DATA);
