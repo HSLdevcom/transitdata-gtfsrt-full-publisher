@@ -30,7 +30,7 @@ public class TripUpdatePublisher extends DatasetPublisher {
 
     private final ContentType contentType;
 
-    protected TripUpdatePublisher(Config config, ISink sink) {
+    public TripUpdatePublisher(Config config, ISink sink) {
         super(config, sink);
         maxAgeInSecs = config.getDuration("bundler.tripUpdate.contentMaxAge", TimeUnit.SECONDS);
 
