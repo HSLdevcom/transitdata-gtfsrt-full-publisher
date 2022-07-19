@@ -1,4 +1,4 @@
-package fi.hsl.transitdata.publisher;
+package fi.hsl.transitdata.publisher.sink;
 
 public interface ISink {
     void put(String name, byte[] data) throws Exception;

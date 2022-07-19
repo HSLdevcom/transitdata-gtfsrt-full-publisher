@@ -1,6 +1,7 @@
 package fi.hsl.transitdata.publisher;
 
 import com.google.transit.realtime.GtfsRealtime;
+import fi.hsl.transitdata.publisher.publisher.TripUpdatePublisher;
 import org.junit.Test;
 
 import java.time.ZoneId;

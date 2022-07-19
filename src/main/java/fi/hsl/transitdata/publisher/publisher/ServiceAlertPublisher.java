@@ -1,7 +1,10 @@
-package fi.hsl.transitdata.publisher;
+package fi.hsl.transitdata.publisher.publisher;
 
 import com.google.transit.realtime.GtfsRealtime;
 import com.typesafe.config.Config;
+import fi.hsl.transitdata.publisher.DatasetEntry;
+import fi.hsl.transitdata.publisher.DatasetPublisher;
+import fi.hsl.transitdata.publisher.sink.ISink;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

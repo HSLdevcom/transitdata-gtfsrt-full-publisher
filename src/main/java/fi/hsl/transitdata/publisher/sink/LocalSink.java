@@ -1,4 +1,4 @@
-package fi.hsl.transitdata.publisher;
+package fi.hsl.transitdata.publisher.sink;
 
 import com.typesafe.config.Config;
 
