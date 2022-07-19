@@ -1,16 +1,20 @@
 package fi.hsl.transitdata.publisher.sink;
 
-import com.microsoft.azure.storage.CloudStorageAccount;
-import com.microsoft.azure.storage.OperationContext;
-import com.microsoft.azure.storage.StorageException;
-import com.microsoft.azure.storage.blob.*;
+import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.BlobServiceClient;
+import com.azure.storage.blob.BlobServiceClientBuilder;
+import com.azure.storage.blob.models.BlobHttpHeaders;
+import com.azure.storage.blob.specialized.BlockBlobClient;
 import com.typesafe.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.security.InvalidKeyException;
-import java.util.Scanner;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -38,14 +42,14 @@ public class AzureSink implements ISink {
 
         //We'll use Docker secrets for getting the key
         String keyPath = config.getString("bundler.output.azure.accountKeyPath");
-        String key = new Scanner(new File(keyPath)).useDelimiter("\\Z").next();
+        String key = new String(Files.readAllBytes(Paths.get(keyPath)), StandardCharsets.UTF_8);
 
         return new AzureSink(name, key, container, maxAge);
     }
 
     @Override
     public void put(String name, byte[] data) throws Exception {
-        upload(name, data, containerName, accountName, accountKey, cacheMaxAgeSeconds);
+        upload(name, data);
         lastPublishTime.set(System.nanoTime());
     }
 
@@ -54,62 +58,42 @@ public class AzureSink implements ISink {
         return lastPublishTime.get();
     }
 
-    private static void upload(String name, byte[] data, String containerName, String accountName, String accountKey, long cacheMaxAge) throws Exception {
+    private void upload(String name, byte[] data) throws Exception {
         log.info("Uploading file {} with {} kB to Azure Blob storage", name, (data.length / 1024));
-        final long startTime = System.currentTimeMillis();
-        final String storageConnectionString = (new StringBuilder())
-                .append("DefaultEndpointsProtocol=https;")
-                .append("AccountName=").append(accountName).append(";")
-                .append("AccountKey=").append(accountKey).append(";")
-                .toString();
+        final long startTime = System.nanoTime();
+
+        final String storageConnectionString = "DefaultEndpointsProtocol=https;" +
+                "AccountName=" + accountName + ";" +
+                "AccountKey=" + accountKey + ";";
 
         try {
-            // Parse the connection string and create a blob client to interact with Blob storage
-            final CloudStorageAccount storageAccount = CloudStorageAccount.parse(storageConnectionString);
-            log.debug("Got reference to StorageAccount");
-            final CloudBlobClient blobClient = storageAccount.createCloudBlobClient();
-            log.debug("Got reference to BlobClient");
-            final CloudBlobContainer container = blobClient.getContainerReference(containerName);
-            log.debug("Got reference to CloudBlobContainer");
+            final BlobServiceClient blobServiceClient = new BlobServiceClientBuilder().connectionString(storageConnectionString).buildClient();
 
-            // Create the container if it does not exist with public access.
-            // TODO we might want to keep the access private and distribute the file via CDN.
-            boolean created = container.createIfNotExists(BlobContainerPublicAccessType.CONTAINER, new BlobRequestOptions(), new OperationContext());
-            if (created) {
-                log.warn("New container named {} created because existing wasn't found", container.getName());
+            BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
+            if (!blobContainerClient.exists()) {
+                blobContainerClient = blobServiceClient.createBlobContainer(containerName);
             }
 
-            CloudBlockBlob blob = container.getBlockBlobReference(name);
-            log.debug("Got reference to CloudBlockBlob with name {}", blob.getName());
-            blob.getProperties().setContentType("application/x-protobuf");
-            blob.getProperties().setCacheControl("max-age=" + cacheMaxAge);
+            final BlockBlobClient blockBlobClient = blobContainerClient.getBlobClient(name).getBlockBlobClient();
+            writeToBlob(blockBlobClient, data);
 
-            final InputStream inputStream = new ByteArrayInputStream(data);
-            final int length = data.length;
+            final BlobHttpHeaders blobHttpHeaders = new BlobHttpHeaders()
+                    .setCacheControl("max-age=" + cacheMaxAgeSeconds)
+                    .setContentType("application/x-protobuf");
 
-            //Creating blob and uploading file to it
-            log.debug("Uploading the file ");
-            blob.upload(inputStream, length);
-
-            //Listing contents of container
-            log.info("Container contains files: ");
-            for (ListBlobItem blobItem : container.listBlobs()) {
-                log.info(blobItem.getUri().toString());
-            }
-        } catch (InvalidKeyException ex) {
-            log.error("Invalid Azure key", ex);
-            throw ex;
-        } catch (StorageException ex) {
-            log.error("Error returned from the service. Http code: {} and error code: {}", ex.getHttpStatusCode(), ex.getErrorCode());
-            log.warn("Full stack trace", ex);
-            throw ex;
+            blockBlobClient.setHttpHeaders(blobHttpHeaders);
         } catch (Exception ex) {
             log.error("Unknown exception while uploading file to storage", ex);
             throw ex;
         } finally {
-            long now = System.currentTimeMillis();
-            log.info("Upload finished in {} ms", (now - startTime));
+            long now = System.nanoTime();
+            log.info("Upload finished in {} ms", Duration.ofNanos(now - startTime).getSeconds());
         }
     }
 
+    private static void writeToBlob(BlockBlobClient blockBlobClient, byte[] data) throws IOException {
+        try (OutputStream os = blockBlobClient.getBlobOutputStream(true)){
+            os.write(data);
+        }
+    }
 }
