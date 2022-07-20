@@ -61,7 +61,8 @@ public class AzureSink implements ISink {
 
         final String storageConnectionString = "DefaultEndpointsProtocol=https;" +
                 "AccountName=" + accountName + ";" +
-                "AccountKey=" + accountKey + ";";
+                "AccountKey=" + accountKey + ";" +
+                "EndpointSuffix=core.windows.net";
 
         try {
             final BlobServiceClient blobServiceClient = new BlobServiceClientBuilder().connectionString(storageConnectionString).buildClient();
