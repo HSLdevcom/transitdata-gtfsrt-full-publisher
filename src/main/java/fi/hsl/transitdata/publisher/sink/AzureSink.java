@@ -23,33 +23,30 @@ public class AzureSink implements ISink {
 
     private final String accountName;
     private final String accountKey;
-    private final String containerName;
     private final long cacheMaxAgeSeconds;
 
     private AtomicLong lastPublishTime = new AtomicLong(System.nanoTime());
 
-    private AzureSink(String accountName, String accountKey, String containerName, long cacheMaxAgeSecs) {
+    private AzureSink(String accountName, String accountKey, long cacheMaxAgeSecs) {
         this.accountName = accountName;
         this.accountKey = accountKey;
-        this.containerName = containerName;
         this.cacheMaxAgeSeconds = cacheMaxAgeSecs;
     }
 
     public static AzureSink newInstance(Config config) throws Exception {
         String name = config.getString("bundler.output.azure.accountName");
-        String container = config.getString("bundler.output.azure.containerName");
         long maxAge = config.getDuration("bundler.output.azure.cacheMaxAge", TimeUnit.SECONDS);
 
         //We'll use Docker secrets for getting the key
         String keyPath = config.getString("bundler.output.azure.accountKeyPath");
         String key = new String(Files.readAllBytes(Paths.get(keyPath)), StandardCharsets.UTF_8);
 
-        return new AzureSink(name, key, container, maxAge);
+        return new AzureSink(name, key, maxAge);
     }
 
     @Override
-    public void put(String name, byte[] data) throws Exception {
-        upload(name, data);
+    public void put(String containerName, String fileName, byte[] data) throws Exception {
+        upload(containerName, fileName, data);
         lastPublishTime.set(System.nanoTime());
     }
 
@@ -58,7 +55,7 @@ public class AzureSink implements ISink {
         return lastPublishTime.get();
     }
 
-    private void upload(String name, byte[] data) throws Exception {
+    private void upload(String containerName, String name, byte[] data) throws Exception {
         log.info("Uploading file {} with {} kB to Azure Blob storage", name, (data.length / 1024));
         final long startTime = System.nanoTime();
 

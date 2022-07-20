@@ -28,7 +28,8 @@ public class TripUpdatePublisher extends DatasetPublisher {
     private final long maxAgeAfterStartSecs;
     private final ZoneId timezone;
 
-    private final ContentType contentType;
+    private final String fullDatasetContainer;
+    private final String googleDatasetContainer;
 
     public TripUpdatePublisher(Config config, ISink sink) {
         super(config, sink);
@@ -37,7 +38,8 @@ public class TripUpdatePublisher extends DatasetPublisher {
         maxAgeAfterStartSecs = config.getDuration("bundler.tripUpdate.maxAgeAfterStart", TimeUnit.SECONDS);
         timezone = ZoneId.of(config.getString("bundler.tripUpdate.timezone"));
 
-        contentType = ContentType.valueOf(config.getString("bundler.tripUpdate.contentType"));
+        fullDatasetContainer = config.getString("bundler.tripUpdate.fullContainerName");
+        googleDatasetContainer = config.getString("bundler.tripUpdate.fullContainerName");
     }
 
     public void initialize() throws Exception {
@@ -76,17 +78,19 @@ public class TripUpdatePublisher extends DatasetPublisher {
         //Update cancellation entity timestamps so that Google does not discard them as too old
         entities = entities.stream().map(entity -> updateCancellationTimestamp(entity, nowInSecs)).collect(Collectors.toList());
 
-        if (contentType == ContentType.google) {
-            //Filter trip updates to publish only trip updates that Google wants
-            entities = filterTripUpdatesForGoogle(entities);
-        }
+        List<GtfsRealtime.FeedEntity> googleDataset = filterTripUpdatesForGoogle(entities);
 
-        GtfsRealtime.FeedMessage fullDump = FeedMessageFactory.createFullFeedMessage(entities, nowInSecs);
-
-        sink.put(fileName, fullDump.toByteArray());
+        publish(fullDatasetContainer, entities, nowInSecs);
+        publish(googleDatasetContainer, googleDataset, nowInSecs);
 
         long elapsed = System.currentTimeMillis() - startTime;
         log.info("Bundling done in {} ms", elapsed);
+    }
+
+    private void publish(String containerName, List<GtfsRealtime.FeedEntity> feedEntities, long timestamp) throws Exception {
+        GtfsRealtime.FeedMessage fullDump = FeedMessageFactory.createFullFeedMessage(feedEntities, timestamp);
+
+        sink.put(containerName, fileName, fullDump.toByteArray());
     }
 
     static void mergeEventsToCache(List<DatasetEntry> newMessages, Map<String, DatasetEntry> cache) {
@@ -215,10 +219,5 @@ public class TripUpdatePublisher extends DatasetPublisher {
         } else {
             return feedEntity;
         }
-    }
-
-    public enum ContentType {
-        full, //Publish all trip updates
-        google //Publish all trip updates for metros and trains and only cancellations for other transport modes
     }
 }
