@@ -1,8 +1,9 @@
-package fi.hsl.transitdata.publisher;
+package fi.hsl.transitdata.publisher.sink;
 
 import com.typesafe.config.Config;
 
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -16,9 +17,12 @@ public class LocalSink implements ISink {
     }
 
     @Override
-    public void put(String name, byte[] data) throws Exception {
-        String fullPath = path + name;
-        Files.write(Paths.get(fullPath), data);
+    public void put(String containerName, String fileName, byte[] data) throws Exception {
+        Path container = Paths.get(path + containerName);
+        Files.createDirectories(container);
+
+        Path file = container.resolve(fileName);
+        Files.write(file, data);
         lastPublishTime.set(System.nanoTime());
     }
 

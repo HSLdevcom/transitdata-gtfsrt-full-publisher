@@ -128,16 +128,15 @@ public class MessageProcessor implements IMessageHandler {
                     log.error("Failed to handle message for schema " + schema, e);
                 }
             });
-
+        } catch (Exception e) {
+            log.error("Unknown error, existing app", e);
+            close();
+            throw e;
+        } finally {
             //Ack Pulsar message
             consumer.acknowledgeAsync(msg).thenRun(() -> {
                 log.debug("Message acked");
             });
-        }
-        catch (Exception e) {
-            log.error("Unknown error, existing app", e);
-            close();
-            throw e;
         }
     }
 
