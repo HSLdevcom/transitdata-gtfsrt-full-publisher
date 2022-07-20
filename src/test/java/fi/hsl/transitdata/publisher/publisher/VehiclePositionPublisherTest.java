@@ -1,4 +1,4 @@
-package fi.hsl.transitdata.publisher;
+package fi.hsl.transitdata.publisher.publisher;
 
 import com.google.transit.realtime.GtfsRealtime;
 import fi.hsl.transitdata.publisher.publisher.VehiclePositionPublisher;

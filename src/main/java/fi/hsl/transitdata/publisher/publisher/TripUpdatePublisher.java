@@ -100,7 +100,7 @@ public class TripUpdatePublisher extends DatasetPublisher {
         newMessages.forEach(entry -> cache.put(entry.getId(), entry));
     }
 
-    static List<GtfsRealtime.FeedEntity> filterTripUpdatesForGoogle(List<GtfsRealtime.FeedEntity> feedEntities) {
+    public static List<GtfsRealtime.FeedEntity> filterTripUpdatesForGoogle(List<GtfsRealtime.FeedEntity> feedEntities) {
         return feedEntities.stream().filter(feedEntity -> {
             return feedEntity.hasTripUpdate() &&
                     feedEntity.getTripUpdate().hasTrip() &&
@@ -150,7 +150,7 @@ public class TripUpdatePublisher extends DatasetPublisher {
         });
     }
 
-    static boolean hasData(GtfsRealtime.TripUpdate tu) {
+    public static boolean hasData(GtfsRealtime.TripUpdate tu) {
         //Canceled trips should not be filtered out even if they have no stop time updates
         if (tu.getTrip().getScheduleRelationship() == GtfsRealtime.TripDescriptor.ScheduleRelationship.CANCELED) {
             return true;
@@ -161,7 +161,7 @@ public class TripUpdatePublisher extends DatasetPublisher {
                         stopTimeUpdate.getScheduleRelationship() != GtfsRealtime.TripUpdate.StopTimeUpdate.ScheduleRelationship.NO_DATA);
     }
 
-    static long getExpirationTime(GtfsRealtime.TripUpdate tu, ZoneId timezone, long maxAgeAfterStartSecs) {
+    public static long getExpirationTime(GtfsRealtime.TripUpdate tu, ZoneId timezone, long maxAgeAfterStartSecs) {
         final LocalDate date = LocalDate.parse(tu.getTrip().getStartDate(), DateTimeFormatter.BASIC_ISO_DATE);
 
         final String[] timeParts = tu.getTrip().getStartTime().split(":");
@@ -210,7 +210,7 @@ public class TripUpdatePublisher extends DatasetPublisher {
                 .collect(Collectors.toList());
     }
 
-    static GtfsRealtime.FeedEntity updateCancellationTimestamp(GtfsRealtime.FeedEntity feedEntity, long timeInSecs) {
+    public static GtfsRealtime.FeedEntity updateCancellationTimestamp(GtfsRealtime.FeedEntity feedEntity, long timeInSecs) {
         if (feedEntity.hasTripUpdate() &&
             feedEntity.getTripUpdate().hasTrip() &&
             feedEntity.getTripUpdate().getTrip().hasScheduleRelationship() &&

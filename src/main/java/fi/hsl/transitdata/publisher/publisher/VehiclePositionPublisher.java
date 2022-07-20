@@ -81,7 +81,7 @@ public class VehiclePositionPublisher extends DatasetPublisher {
         sink.put(containerName, fileName, vehiclePositionDump.toByteArray());
     }
 
-    static List<GtfsRealtime.FeedEntity> filterVehiclePositionsForGoogle(Collection<GtfsRealtime.FeedEntity> entities, boolean busesAndTrams, boolean metrosAndTrains) {
+    public static List<GtfsRealtime.FeedEntity> filterVehiclePositionsForGoogle(Collection<GtfsRealtime.FeedEntity> entities, boolean busesAndTrams, boolean metrosAndTrains) {
         return entities.stream().filter(entity -> {
             GtfsRealtime.VehiclePosition vehiclePosition = entity.getVehicle();
             String routeId = vehiclePosition.getTrip().getRouteId();
