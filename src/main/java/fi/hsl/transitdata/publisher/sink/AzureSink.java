@@ -56,7 +56,7 @@ public class AzureSink implements ISink {
     }
 
     private void upload(String containerName, String name, byte[] data) throws Exception {
-        log.info("Uploading file {} with {} kB to Azure Blob storage", name, (data.length / 1024));
+        log.info("Uploading file {} with {} kB to Azure Blob storage container {}", name, (data.length / 1024), containerName);
         final long startTime = System.nanoTime();
 
         final String storageConnectionString = "DefaultEndpointsProtocol=https;" +
