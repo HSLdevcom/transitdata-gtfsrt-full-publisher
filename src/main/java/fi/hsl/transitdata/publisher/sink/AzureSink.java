@@ -21,16 +21,21 @@ import java.util.concurrent.atomic.AtomicLong;
 public class AzureSink implements ISink {
     private static final Logger log = LoggerFactory.getLogger(AzureSink.class);
 
-    private final String accountName;
-    private final String accountKey;
     private final long cacheMaxAgeSeconds;
+
+    private final BlobServiceClient blobServiceClient;
 
     private AtomicLong lastPublishTime = new AtomicLong(System.nanoTime());
 
     private AzureSink(String accountName, String accountKey, long cacheMaxAgeSecs) {
-        this.accountName = accountName;
-        this.accountKey = accountKey;
         this.cacheMaxAgeSeconds = cacheMaxAgeSecs;
+
+        final String storageConnectionString = "DefaultEndpointsProtocol=https;" +
+                "AccountName=" + accountName + ";" +
+                "AccountKey=" + accountKey + ";" +
+                "EndpointSuffix=core.windows.net";
+
+        blobServiceClient = new BlobServiceClientBuilder().connectionString(storageConnectionString).buildClient();
     }
 
     public static AzureSink newInstance(Config config) throws Exception {
@@ -59,14 +64,7 @@ public class AzureSink implements ISink {
         log.info("Uploading file {} with {} kB to Azure Blob storage container {}", name, (data.length / 1024), containerName);
         final long startTime = System.nanoTime();
 
-        final String storageConnectionString = "DefaultEndpointsProtocol=https;" +
-                "AccountName=" + accountName + ";" +
-                "AccountKey=" + accountKey + ";" +
-                "EndpointSuffix=core.windows.net";
-
         try {
-            final BlobServiceClient blobServiceClient = new BlobServiceClientBuilder().connectionString(storageConnectionString).buildClient();
-
             BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
             if (!blobContainerClient.exists()) {
                 blobContainerClient = blobServiceClient.createBlobContainer(containerName);
