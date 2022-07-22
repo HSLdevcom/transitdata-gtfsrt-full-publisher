@@ -67,6 +67,7 @@ public class AzureSink implements ISink {
         try {
             BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
             if (!blobContainerClient.exists()) {
+                log.info("Blob container {} did not exist, creating new container...", containerName);
                 blobContainerClient = blobServiceClient.createBlobContainer(containerName);
             }
 
