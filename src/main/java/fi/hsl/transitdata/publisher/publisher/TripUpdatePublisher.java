@@ -39,7 +39,7 @@ public class TripUpdatePublisher extends DatasetPublisher {
         timezone = ZoneId.of(config.getString("bundler.tripUpdate.timezone"));
 
         fullDatasetContainer = config.getString("bundler.tripUpdate.fullContainerName");
-        googleDatasetContainer = config.getString("bundler.tripUpdate.fullContainerName");
+        googleDatasetContainer = config.getString("bundler.tripUpdate.googleContainerName");
     }
 
     public void initialize() throws Exception {
