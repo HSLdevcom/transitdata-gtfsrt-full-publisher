@@ -1,7 +1,7 @@
-FROM openjdk:8-jre-slim
+FROM eclipse-temurin:11-alpine
 #Install curl for health check
-RUN apt-get update && apt-get install -y --no-install-recommends curl
+RUN apk --no-cache add curl
 ADD target/transitdata-gtfsrt-full-publisher.jar /usr/app/transitdata-gtfsrt-full-publisher.jar
-COPY start-application.sh /
-RUN chmod +x /start-application.sh
-CMD ["/start-application.sh"]
+COPY start-application.sh /usr/app/
+RUN chmod +x /usr/app/start-application.sh
+ENTRYPOINT ["/usr/app/start-application.sh"]

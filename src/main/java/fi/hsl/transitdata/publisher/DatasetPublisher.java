@@ -1,6 +1,12 @@
 package fi.hsl.transitdata.publisher;
 
 import com.typesafe.config.Config;
+import fi.hsl.transitdata.publisher.publisher.ServiceAlertPublisher;
+import fi.hsl.transitdata.publisher.publisher.TripUpdatePublisher;
+import fi.hsl.transitdata.publisher.publisher.VehiclePositionPublisher;
+import fi.hsl.transitdata.publisher.sink.AzureSink;
+import fi.hsl.transitdata.publisher.sink.ISink;
+import fi.hsl.transitdata.publisher.sink.LocalSink;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +51,7 @@ public abstract class DatasetPublisher {
         } else if (type == DataType.VehiclePosition) {
             return new VehiclePositionPublisher(config, sink);
         } else {
-            throw new IllegalArgumentException("Invalid DataType, should be TripUpdate or ServiceAlert");
+            throw new IllegalArgumentException("Invalid DataType, should be TripUpdate or ServiceAlert or VehiclePosition");
         }
     }
 

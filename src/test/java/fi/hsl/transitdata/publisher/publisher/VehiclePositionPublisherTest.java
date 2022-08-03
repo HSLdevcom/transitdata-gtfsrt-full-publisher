@@ -1,11 +1,9 @@
-package fi.hsl.transitdata.publisher;
+package fi.hsl.transitdata.publisher.publisher;
 
 import com.google.transit.realtime.GtfsRealtime;
+import fi.hsl.transitdata.publisher.publisher.VehiclePositionPublisher;
 import org.junit.Test;
 
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
