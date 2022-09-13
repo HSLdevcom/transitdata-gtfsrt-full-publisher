@@ -10,6 +10,7 @@ import fi.hsl.transitdata.publisher.sink.ISink;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -41,7 +42,7 @@ public class VehiclePositionPublisher extends DatasetPublisher {
             return;
         }
 
-        long startTime = System.currentTimeMillis();
+        long startTime = System.nanoTime();
         logger.info("Starting GTFS Full dataset publishing. Cache size: {}, new vehicle positions: {}", vehiclePositionCache.size(), newMessages.size());
 
         mergeVehiclePositionsToCache(newMessages, vehiclePositionCache);
@@ -72,7 +73,7 @@ public class VehiclePositionPublisher extends DatasetPublisher {
         publishDataset(busTramDatasetContainerName, busTramDataset, currentTimeSecs);
         publishDataset(trainMetroDatasetContainerName, trainMetroDataset, currentTimeSecs);
 
-        logger.info("Vehicle positions published in {}ms", System.currentTimeMillis() - startTime);
+        logger.info("Vehicle positions published in {}ms", Duration.ofNanos(System.nanoTime() - startTime).toMillis());
     }
 
     private void publishDataset(String containerName, List<GtfsRealtime.FeedEntity> feedEntities, long currentTimeSecs) throws Exception {
