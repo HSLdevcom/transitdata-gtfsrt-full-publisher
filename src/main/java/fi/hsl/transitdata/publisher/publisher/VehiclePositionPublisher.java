@@ -41,9 +41,11 @@ public class VehiclePositionPublisher extends DatasetPublisher {
             logger.warn("No new vehicle position messages, ignoring..");
             return;
         }
-
         long startTime = System.nanoTime();
         logger.info("Starting GTFS Full dataset publishing. Cache size: {}, new vehicle positions: {}", vehiclePositionCache.size(), newMessages.size());
+
+        //Sort new messages by timestamp to make sure that the latest message gets published
+        newMessages.sort(Comparator.comparingLong(DatasetEntry::getEventTimeUtcMs));
 
         mergeVehiclePositionsToCache(newMessages, vehiclePositionCache);
         logger.info("Cache size after merging: {}", vehiclePositionCache.size());
@@ -103,8 +105,6 @@ public class VehiclePositionPublisher extends DatasetPublisher {
     }
 
     static void mergeVehiclePositionsToCache(List<DatasetEntry> entries, Map<String, GtfsRealtime.FeedEntity> cache) {
-        entries.sort(Comparator.comparingLong(DatasetEntry::getEventTimeUtcMs));
-
         Set<String> vehiclesThatHadOlderTimestamp = new HashSet<>();
 
         entries.forEach(entry -> {
