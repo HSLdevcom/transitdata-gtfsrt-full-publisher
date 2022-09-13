@@ -51,6 +51,11 @@ public class VehiclePositionPublisher extends DatasetPublisher {
         logger.info("Cache size after merging: {}", vehiclePositionCache.size());
 
         final Instant currentTime = Instant.now();
+
+        Optional<Instant> vpMaxTimestamp = vehiclePositionCache.values().stream().max(Comparator.comparing(feedEntity -> feedEntity.getVehicle().getTimestamp())).map(feedEntity -> Instant.ofEpochSecond(feedEntity.getVehicle().getTimestamp()));
+        Optional<Instant> vpMinTimestamp = vehiclePositionCache.values().stream().min(Comparator.comparing(feedEntity -> feedEntity.getVehicle().getTimestamp())).map(feedEntity -> Instant.ofEpochSecond(feedEntity.getVehicle().getTimestamp()));
+        logger.info("Current time: {}, min vehicle timestamp in cache: {}, max vehicle timestamp in cache: {}", currentTime, vpMinTimestamp.orElse(null), vpMaxTimestamp.orElse(null));
+
         pruneVehiclePositionCache(currentTime);
 
         List<GtfsRealtime.FeedEntity> fullDataset = new ArrayList<>(vehiclePositionCache.values());
