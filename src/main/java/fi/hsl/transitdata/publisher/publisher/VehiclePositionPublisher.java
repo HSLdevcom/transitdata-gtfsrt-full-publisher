@@ -11,8 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class VehiclePositionPublisher extends DatasetPublisher {
@@ -20,7 +20,7 @@ public class VehiclePositionPublisher extends DatasetPublisher {
 
     private Map<String, GtfsRealtime.FeedEntity> vehiclePositionCache = new HashMap<>(1000);
 
-    private final long maxAgeInSecs;
+    private final Duration maxAge;
 
     private final String fullDatasetContainerName;
     private final String busTramDatasetContainerName;
@@ -28,7 +28,7 @@ public class VehiclePositionPublisher extends DatasetPublisher {
 
     public VehiclePositionPublisher(Config config, ISink sink) {
         super(config, sink);
-        maxAgeInSecs = config.getDuration("bundler.vehiclePosition.contentMaxAge", TimeUnit.SECONDS);
+        maxAge = config.getDuration("bundler.vehiclePosition.contentMaxAge");
 
         fullDatasetContainerName = config.getString("bundler.vehiclePosition.fullContainerName");
         busTramDatasetContainerName = config.getString("bundler.vehiclePosition.busTramContainerName");
@@ -48,15 +48,31 @@ public class VehiclePositionPublisher extends DatasetPublisher {
         mergeVehiclePositionsToCache(newMessages, vehiclePositionCache);
         logger.info("Cache size after merging: {}", vehiclePositionCache.size());
 
-        logger.info("Removing vehicle positions older than {} seconds from cache", maxAgeInSecs);
-        int cacheSizeBefore = vehiclePositionCache.size();
+        final Instant currentTime = Instant.now();
+        pruneVehiclePositionCache(currentTime);
 
-        long currentTimeSecs = System.currentTimeMillis() / 1000;
+        List<GtfsRealtime.FeedEntity> fullDataset = new ArrayList<>(vehiclePositionCache.values());
+        List<GtfsRealtime.FeedEntity> busTramDataset = filterVehiclePositionsForGoogle(fullDataset, true, false);
+        List<GtfsRealtime.FeedEntity> trainMetroDataset = filterVehiclePositionsForGoogle(fullDataset, false, true);
+
+        publishDataset(fullDatasetContainerName, fullDataset, currentTime);
+        publishDataset(busTramDatasetContainerName, busTramDataset, currentTime);
+        publishDataset(trainMetroDatasetContainerName, trainMetroDataset, currentTime);
+
+        logger.info("Vehicle positions published in {}ms", Duration.ofNanos(System.nanoTime() - startTime).toMillis());
+    }
+
+    private void pruneVehiclePositionCache(Instant currentTime) {
+        logger.info("Removing vehicle positions older than {} seconds from cache", maxAge.getSeconds());
+        final int cacheSizeBefore = vehiclePositionCache.size();
+
+        final long currentTimeSecs = currentTime.getEpochSecond();
         vehiclePositionCache.entrySet().removeIf(entry -> {
-            GtfsRealtime.FeedEntity entity = entry.getValue();
-            long vehiclePosAge = currentTimeSecs - entity.getVehicle().getTimestamp();
-            if (vehiclePosAge > maxAgeInSecs) {
-                logger.debug("Removing {} because it was older than {} seconds (age: {}s)", entry.getKey(), maxAgeInSecs, vehiclePosAge);
+            final GtfsRealtime.FeedEntity entity = entry.getValue();
+            final Duration vehiclePosAge = Duration.ofSeconds(currentTimeSecs - entity.getVehicle().getTimestamp());
+
+            if (vehiclePosAge.compareTo(maxAge) > 0) {
+                logger.debug("Removing {} because it was older than {} seconds (age: {}s)", entry.getKey(), maxAge.getSeconds(), vehiclePosAge);
                 return true;
             } else {
                 return false;
@@ -64,20 +80,10 @@ public class VehiclePositionPublisher extends DatasetPublisher {
         });
 
         logger.info("Cache size before removing old vehicle positions: {}, after: {}", cacheSizeBefore, vehiclePositionCache.size());
-
-        List<GtfsRealtime.FeedEntity> fullDataset = new ArrayList<>(vehiclePositionCache.values());
-        List<GtfsRealtime.FeedEntity> busTramDataset = filterVehiclePositionsForGoogle(fullDataset, true, false);
-        List<GtfsRealtime.FeedEntity> trainMetroDataset = filterVehiclePositionsForGoogle(fullDataset, false, true);
-
-        publishDataset(fullDatasetContainerName, fullDataset, currentTimeSecs);
-        publishDataset(busTramDatasetContainerName, busTramDataset, currentTimeSecs);
-        publishDataset(trainMetroDatasetContainerName, trainMetroDataset, currentTimeSecs);
-
-        logger.info("Vehicle positions published in {}ms", Duration.ofNanos(System.nanoTime() - startTime).toMillis());
     }
 
-    private void publishDataset(String containerName, List<GtfsRealtime.FeedEntity> feedEntities, long currentTimeSecs) throws Exception {
-        GtfsRealtime.FeedMessage vehiclePositionDump = FeedMessageFactory.createFullFeedMessage(feedEntities, currentTimeSecs);
+    private void publishDataset(String containerName, List<GtfsRealtime.FeedEntity> feedEntities, Instant currentTime) throws Exception {
+        GtfsRealtime.FeedMessage vehiclePositionDump = FeedMessageFactory.createFullFeedMessage(feedEntities, currentTime.getEpochSecond());
 
         sink.put(containerName, fileName, vehiclePositionDump.toByteArray());
     }
