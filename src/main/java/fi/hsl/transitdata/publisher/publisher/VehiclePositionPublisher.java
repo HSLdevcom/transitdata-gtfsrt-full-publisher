@@ -62,7 +62,7 @@ public class VehiclePositionPublisher extends DatasetPublisher {
             }
         });
 
-        logger.info("Cache size before: {}, after: {}", cacheSizeBefore, vehiclePositionCache.size());
+        logger.info("Cache size before removing old vehicle positions: {}, after: {}", cacheSizeBefore, vehiclePositionCache.size());
 
         List<GtfsRealtime.FeedEntity> fullDataset = new ArrayList<>(vehiclePositionCache.values());
         List<GtfsRealtime.FeedEntity> busTramDataset = filterVehiclePositionsForGoogle(fullDataset, true, false);
