@@ -58,6 +58,10 @@ public class VehiclePositionPublisher extends DatasetPublisher {
 
         pruneVehiclePositionCache(currentTime);
 
+        if (vehiclePositionCache.size() == 0) {
+            logger.warn("Publishing empty dataset");
+        }
+
         List<GtfsRealtime.FeedEntity> fullDataset = new ArrayList<>(vehiclePositionCache.values());
         List<GtfsRealtime.FeedEntity> busTramDataset = filterVehiclePositionsForGoogle(fullDataset, true, false);
         List<GtfsRealtime.FeedEntity> trainMetroDataset = filterVehiclePositionsForGoogle(fullDataset, false, true);
