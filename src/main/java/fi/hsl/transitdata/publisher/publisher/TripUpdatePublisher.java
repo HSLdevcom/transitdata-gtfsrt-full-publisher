@@ -7,6 +7,7 @@ import fi.hsl.common.transitdata.RouteIdUtils;
 import fi.hsl.transitdata.publisher.DatasetEntry;
 import fi.hsl.transitdata.publisher.DatasetPublisher;
 import fi.hsl.transitdata.publisher.sink.ISink;
+import org.apache.pulsar.shade.org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,6 +70,22 @@ public class TripUpdatePublisher extends DatasetPublisher {
 
         //create GTFS RT Full dataset
         List<GtfsRealtime.FeedEntity> entities = getFeedEntities(cache);
+        
+        //log if assignedStopId is set
+        for (GtfsRealtime.FeedEntity entity : entities) {
+            GtfsRealtime.TripUpdate tripUpdate = entity.getTripUpdate();
+            
+            for (GtfsRealtime.TripUpdate.StopTimeUpdate stopTimeUpdate : tripUpdate.getStopTimeUpdateList()) {
+                String assignedStopId = stopTimeUpdate.getStopTimeProperties().getAssignedStopId();
+                
+                if (stopTimeUpdate.getStopTimeProperties() != null && StringUtils.isNotBlank(assignedStopId)) {
+                    log.info("AssignedStopId is set. AssignedStopId={}, StopId={}, StopSequence={}, RouteId={}, DirectionId={}, OperationDay={}, StartTime={}",
+                            assignedStopId, stopTimeUpdate.getStopId(), stopTimeUpdate.getStopSequence(),
+                            tripUpdate.getTrip().getRouteId(), tripUpdate.getTrip().getDirectionId(),
+                            tripUpdate.getTrip().getStartDate(), tripUpdate.getTrip().getStartTime());
+                }
+            }
+        }
 
         //Add alert if something is wrong
         if (entities.size() != cache.size()) {
