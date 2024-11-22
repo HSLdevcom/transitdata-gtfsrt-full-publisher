@@ -43,11 +43,13 @@ public class AzureSink implements ISink {
     public static AzureSink newInstance(Config config) throws Exception {
         String name = config.getString("bundler.output.azure.accountName");
         long maxAge = config.getDuration("bundler.output.azure.cacheMaxAge", TimeUnit.SECONDS);
-
-        //We'll use Docker secrets for getting the key
-        String keyPath = config.getString("bundler.output.azure.accountKeyPath");
-        String key = new String(Files.readAllBytes(Paths.get(keyPath)), StandardCharsets.UTF_8);
-
+    
+        String key = System.getenv("TRANSITDATA_AZURE_STORAGE_KEY");
+    
+        if (key == null || key.isEmpty()) {
+            throw new IllegalArgumentException("Azure storage key not found.");
+        }
+    
         return new AzureSink(name, key, maxAge);
     }
 
