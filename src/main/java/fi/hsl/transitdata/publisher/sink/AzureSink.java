@@ -35,7 +35,6 @@ public class AzureSink implements ISink {
                 "AccountKey=" + accountKey + ";" +
                 "EndpointSuffix=core.windows.net";
 
-        log.debug("Using connection string: {}", storageConnectionString);
 
         blobServiceClient = new BlobServiceClientBuilder().connectionString(storageConnectionString).buildClient();
     }
