@@ -65,13 +65,13 @@ public class AzureSink implements ISink {
     }
 
     private void upload(String containerName, String name, byte[] data) throws Exception {
-        log.info("Uploading file {} with {} kB to Azure Blob storage container {}", name, (data.length / 1024), containerName);
+        log.debug("Uploading file {} with {} kB to Azure Blob storage container {}", name, (data.length / 1024), containerName);
         final long startTime = System.nanoTime();
 
         try {
             BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
             if (!blobContainerClient.exists()) {
-                log.info("Blob container {} did not exist, creating new container...", containerName);
+                log.debug("Blob container {} did not exist, creating new container...", containerName);
                 blobContainerClient = blobServiceClient.createBlobContainer(containerName);
             }
 
@@ -88,7 +88,7 @@ public class AzureSink implements ISink {
             throw ex;
         } finally {
             long now = System.nanoTime();
-            log.info("Upload finished in {} ms", Duration.ofNanos(now - startTime).getSeconds());
+            log.debug("Upload finished in {} ms", Duration.ofNanos(now - startTime).getSeconds());
         }
     }
 
