@@ -54,19 +54,19 @@ public class TripUpdatePublisher extends DatasetPublisher {
         }
 
         long startTime = System.currentTimeMillis();
-        log.info("Starting GTFS Full dataset publishing. Cache size: {}, new events: {}", cache.size(), newMessages.size());
+        log.debug("Starting GTFS Full dataset publishing. Cache size: {}, new events: {}", cache.size(), newMessages.size());
 
         mergeEventsToCache(newMessages, cache);
-        log.info("Cache size after merging: {}", cache.size());
+        log.debug("Cache size after merging: {}", cache.size());
 
         //filter old ones out
-        log.info("Pruning cache, removing events older than {} secs", maxAgeInSecs);
+        log.debug("Pruning cache, removing events older than {} secs", maxAgeInSecs);
         int sizeBefore = cache.size();
 
         final long nowInSecs = System.currentTimeMillis() / 1000;
         removeOldEntries(cache, maxAgeInSecs, nowInSecs);
         int sizeAfter = cache.size();
-        log.info("Size before pruning {} and after {}", sizeBefore, sizeAfter);
+        log.debug("Size before pruning {} and after {}", sizeBefore, sizeAfter);
 
         //create GTFS RT Full dataset
         List<GtfsRealtime.FeedEntity> entities = getFeedEntities(cache);
@@ -79,7 +79,7 @@ public class TripUpdatePublisher extends DatasetPublisher {
                 String assignedStopId = stopTimeUpdate.getStopTimeProperties().getAssignedStopId();
                 
                 if (stopTimeUpdate.getStopTimeProperties() != null && StringUtils.isNotBlank(assignedStopId)) {
-                    log.info("AssignedStopId is set. AssignedStopId={}, StopId={}, StopSequence={}, RouteId={}, DirectionId={}, OperationDay={}, StartTime={}",
+                    log.debug("AssignedStopId is set. AssignedStopId={}, StopId={}, StopSequence={}, RouteId={}, DirectionId={}, OperationDay={}, StartTime={}",
                             assignedStopId, stopTimeUpdate.getStopId(), stopTimeUpdate.getStopSequence(),
                             tripUpdate.getTrip().getRouteId(), tripUpdate.getTrip().getDirectionId(),
                             tripUpdate.getTrip().getStartDate(), tripUpdate.getTrip().getStartTime());
@@ -89,7 +89,7 @@ public class TripUpdatePublisher extends DatasetPublisher {
 
         //Add alert if something is wrong
         if (entities.size() != cache.size()) {
-            log.error("Cache size != entity-list size. Bug or is something strange happening here..?");
+            log.warn("Cache size != entity-list size. Bug or is something strange happening here..?");
         }
 
         //Update cancellation entity timestamps so that Google does not discard them as too old
@@ -101,7 +101,7 @@ public class TripUpdatePublisher extends DatasetPublisher {
         publish(googleDatasetContainer, googleDataset, nowInSecs);
 
         long elapsed = System.currentTimeMillis() - startTime;
-        log.info("Bundling done in {} ms", elapsed);
+        log.debug("Bundling done in {} ms", elapsed);
     }
 
     private void publish(String containerName, List<GtfsRealtime.FeedEntity> feedEntities, long timestamp) throws Exception {
@@ -136,7 +136,7 @@ public class TripUpdatePublisher extends DatasetPublisher {
             // Let's add a warning which should be monitored
             GtfsRealtime.FeedMessage feedMessage = datasetEntry.getFeedMessage();
             if (feedMessage.getEntityCount() != 1) {
-                log.error("FeedMessage entity count != 1. count: {}", feedMessage.getEntityCount());
+                log.warn("FeedMessage entity count != 1. count: {}", feedMessage.getEntityCount());
                 for (GtfsRealtime.FeedEntity entity: feedMessage.getEntityList()) {
                     log.debug("FeedEntity Id: {}", entity.getId());
                 }
