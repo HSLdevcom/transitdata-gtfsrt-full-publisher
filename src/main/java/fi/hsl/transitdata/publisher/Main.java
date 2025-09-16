@@ -24,8 +24,7 @@ public class Main {
 
             app.launchWithHandler(processor);
 
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.error("Exception at main", e);
         }
 

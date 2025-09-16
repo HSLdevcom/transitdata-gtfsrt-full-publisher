@@ -42,7 +42,8 @@ public class VehiclePositionPublisher extends DatasetPublisher {
             return;
         }
         long startTime = System.nanoTime();
-        logger.info("Starting GTFS Full dataset publishing. Cache size: {}, new vehicle positions: {}", vehiclePositionCache.size(), newMessages.size());
+        logger.info("Starting GTFS Full dataset publishing. Cache size: {}, new vehicle positions: {}",
+                vehiclePositionCache.size(), newMessages.size());
 
         //Sort new messages by timestamp to make sure that the latest message gets published
         newMessages.sort(Comparator.comparingLong(DatasetEntry::getEventTimeUtcMs));
@@ -52,9 +53,14 @@ public class VehiclePositionPublisher extends DatasetPublisher {
 
         final Instant currentTime = Instant.now();
 
-        Optional<Instant> vpMaxTimestamp = vehiclePositionCache.values().stream().max(Comparator.comparing(feedEntity -> feedEntity.getVehicle().getTimestamp())).map(feedEntity -> Instant.ofEpochSecond(feedEntity.getVehicle().getTimestamp()));
-        Optional<Instant> vpMinTimestamp = vehiclePositionCache.values().stream().min(Comparator.comparing(feedEntity -> feedEntity.getVehicle().getTimestamp())).map(feedEntity -> Instant.ofEpochSecond(feedEntity.getVehicle().getTimestamp()));
-        logger.info("Current time: {}, min vehicle timestamp in cache: {}, max vehicle timestamp in cache: {}", currentTime, vpMinTimestamp.orElse(null), vpMaxTimestamp.orElse(null));
+        Optional<Instant> vpMaxTimestamp = vehiclePositionCache.values().stream()
+                .max(Comparator.comparing(feedEntity -> feedEntity.getVehicle().getTimestamp()))
+                .map(feedEntity -> Instant.ofEpochSecond(feedEntity.getVehicle().getTimestamp()));
+        Optional<Instant> vpMinTimestamp = vehiclePositionCache.values().stream()
+                .min(Comparator.comparing(feedEntity -> feedEntity.getVehicle().getTimestamp()))
+                .map(feedEntity -> Instant.ofEpochSecond(feedEntity.getVehicle().getTimestamp()));
+        logger.info("Current time: {}, min vehicle timestamp in cache: {}, max vehicle timestamp in cache: {}",
+                currentTime, vpMinTimestamp.orElse(null), vpMaxTimestamp.orElse(null));
 
         pruneVehiclePositionCache(currentTime);
 
@@ -83,23 +89,28 @@ public class VehiclePositionPublisher extends DatasetPublisher {
             final Duration vehiclePosAge = Duration.ofSeconds(currentTimeSecs - entity.getVehicle().getTimestamp());
 
             if (vehiclePosAge.compareTo(maxAge) > 0) {
-                logger.debug("Removing {} because it was older than {} seconds (age: {}s)", entry.getKey(), maxAge.getSeconds(), vehiclePosAge);
+                logger.debug("Removing {} because it was older than {} seconds (age: {}s)", entry.getKey(),
+                        maxAge.getSeconds(), vehiclePosAge);
                 return true;
             } else {
                 return false;
             }
         });
 
-        logger.info("Cache size before removing old vehicle positions: {}, after: {}", cacheSizeBefore, vehiclePositionCache.size());
+        logger.info("Cache size before removing old vehicle positions: {}, after: {}", cacheSizeBefore,
+                vehiclePositionCache.size());
     }
 
-    private void publishDataset(String containerName, List<GtfsRealtime.FeedEntity> feedEntities, Instant currentTime) throws Exception {
-        GtfsRealtime.FeedMessage vehiclePositionDump = FeedMessageFactory.createFullFeedMessage(feedEntities, currentTime.getEpochSecond());
+    private void publishDataset(String containerName, List<GtfsRealtime.FeedEntity> feedEntities, Instant currentTime)
+            throws Exception {
+        GtfsRealtime.FeedMessage vehiclePositionDump = FeedMessageFactory.createFullFeedMessage(feedEntities,
+                currentTime.getEpochSecond());
 
         sink.put(containerName, fileName, vehiclePositionDump.toByteArray());
     }
 
-    public static List<GtfsRealtime.FeedEntity> filterVehiclePositionsForGoogle(Collection<GtfsRealtime.FeedEntity> entities, boolean busesAndTrams, boolean metrosAndTrains) {
+    public static List<GtfsRealtime.FeedEntity> filterVehiclePositionsForGoogle(
+            Collection<GtfsRealtime.FeedEntity> entities, boolean busesAndTrams, boolean metrosAndTrains) {
         return entities.stream().filter(entity -> {
             GtfsRealtime.VehiclePosition vehiclePosition = entity.getVehicle();
             String routeId = vehiclePosition.getTrip().getRouteId();
@@ -118,7 +129,8 @@ public class VehiclePositionPublisher extends DatasetPublisher {
 
         entries.forEach(entry -> {
             if (entry.getEntities().size() != 1) {
-                logger.warn("FeedMessage had unexpected amount of entities (!= 1), entity count: {}", entry.getEntities().size());
+                logger.warn("FeedMessage had unexpected amount of entities (!= 1), entity count: {}",
+                        entry.getEntities().size());
                 entry.getEntities().forEach(entity -> logger.debug("Entity id: {}", entity.getId()));
             }
 
@@ -138,7 +150,8 @@ public class VehiclePositionPublisher extends DatasetPublisher {
         });
 
         if (!vehiclesThatHadOlderTimestamp.isEmpty()) {
-            logger.warn("Vehicles [ {} ] had timestamp older than previously published vehicle position", String.join(", ", vehiclesThatHadOlderTimestamp));
+            logger.warn("Vehicles [ {} ] had timestamp older than previously published vehicle position",
+                    String.join(", ", vehiclesThatHadOlderTimestamp));
         }
     }
 }
