@@ -32,7 +32,7 @@ public class ServiceAlertPublisher extends DatasetPublisher {
         if (latest.isPresent()) {
             GtfsRealtime.FeedMessage msg = latest.get().getFeedMessage();
 
-            log.info("Publishing a new Service Alert");
+            log.debug("Publishing a new Service Alert");
             byte[] data = msg.toByteArray();
             sink.put(containerName, fileName, data);
         }

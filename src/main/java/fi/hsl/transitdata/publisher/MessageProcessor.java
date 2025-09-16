@@ -85,7 +85,7 @@ public class MessageProcessor implements IMessageHandler {
     }
 
     private static void closeApplication(PulsarApplication app, ScheduledExecutorService scheduler) {
-        log.warn("Closing application");
+        log.info("Closing application");
         scheduler.shutdown();
         app.close();
     }
@@ -97,7 +97,7 @@ public class MessageProcessor implements IMessageHandler {
             inputQueue.clear();
         }
 
-        log.info("Dump-time, new messages: {}", copy.size());
+        log.debug("Dump-time, new messages: {}", copy.size());
         try {
             publisher.publish(copy);
         } catch (Exception e) {
@@ -118,7 +118,7 @@ public class MessageProcessor implements IMessageHandler {
                             || schema.schema == TransitdataProperties.ProtobufSchema.GTFS_VehiclePosition) {
                         handleFeedMessage(msg);
                     } else {
-                        log.info("Ignoring message of schema " + schema);
+                        log.debug("Ignoring message of schema " + schema);
                     }
                 } catch (Exception e) {
                     log.error("Failed to handle message for schema " + schema, e);
