@@ -52,8 +52,7 @@ public class MessageProcessor implements IMessageHandler {
             try {
                 log.debug("Checking results!");
                 dump();
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 log.error("Failed to check results, closing application", e);
                 closeApplication(app, scheduler);
             }
@@ -70,9 +69,9 @@ public class MessageProcessor implements IMessageHandler {
 
                 if (!healthy) {
                     final long now = System.nanoTime();
-                    log.warn("Service unhealthy: data was last published {} seconds ago, but last received {} seconds ago",
-                            (now - lastPublished) / 1_000_000_000,
-                            (now - lastReceived) / 1_000_000_000);
+                    log.warn(
+                            "Service unhealthy: data was last published {} seconds ago, but last received {} seconds ago",
+                            (now - lastPublished) / 1_000_000_000, (now - lastReceived) / 1_000_000_000);
                 }
 
                 return healthy;
@@ -101,8 +100,7 @@ public class MessageProcessor implements IMessageHandler {
         log.debug("Dump-time, new messages: {}", copy.size());
         try {
             publisher.publish(copy);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.error("Failed to publish Full GTFS-RT dataset", e);
             throw e;
         }
@@ -115,16 +113,14 @@ public class MessageProcessor implements IMessageHandler {
         try {
             TransitdataSchema.parseFromPulsarMessage(msg).ifPresent(schema -> {
                 try {
-                    if (schema.schema == TransitdataProperties.ProtobufSchema.GTFS_TripUpdate ||
-                        schema.schema == TransitdataProperties.ProtobufSchema.GTFS_ServiceAlert ||
-                        schema.schema == TransitdataProperties.ProtobufSchema.GTFS_VehiclePosition) {
+                    if (schema.schema == TransitdataProperties.ProtobufSchema.GTFS_TripUpdate
+                            || schema.schema == TransitdataProperties.ProtobufSchema.GTFS_ServiceAlert
+                            || schema.schema == TransitdataProperties.ProtobufSchema.GTFS_VehiclePosition) {
                         handleFeedMessage(msg);
-                    }
-                    else {
+                    } else {
                         log.debug("Ignoring message of schema " + schema);
                     }
-                }
-                catch (Exception e) {
+                } catch (Exception e) {
                     log.error("Failed to handle message for schema " + schema, e);
                 }
             });

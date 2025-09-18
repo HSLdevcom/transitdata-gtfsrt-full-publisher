@@ -54,7 +54,8 @@ public class TripUpdatePublisher extends DatasetPublisher {
         }
 
         long startTime = System.currentTimeMillis();
-        log.debug("Starting GTFS Full dataset publishing. Cache size: {}, new events: {}", cache.size(), newMessages.size());
+        log.debug("Starting GTFS Full dataset publishing. Cache size: {}, new events: {}", cache.size(),
+                newMessages.size());
 
         mergeEventsToCache(newMessages, cache);
         log.debug("Cache size after merging: {}", cache.size());
@@ -70,16 +71,17 @@ public class TripUpdatePublisher extends DatasetPublisher {
 
         //create GTFS RT Full dataset
         List<GtfsRealtime.FeedEntity> entities = getFeedEntities(cache);
-        
+
         //log if assignedStopId is set
         for (GtfsRealtime.FeedEntity entity : entities) {
             GtfsRealtime.TripUpdate tripUpdate = entity.getTripUpdate();
-            
+
             for (GtfsRealtime.TripUpdate.StopTimeUpdate stopTimeUpdate : tripUpdate.getStopTimeUpdateList()) {
                 String assignedStopId = stopTimeUpdate.getStopTimeProperties().getAssignedStopId();
-                
+
                 if (stopTimeUpdate.getStopTimeProperties() != null && StringUtils.isNotBlank(assignedStopId)) {
-                    log.debug("AssignedStopId is set. AssignedStopId={}, StopId={}, StopSequence={}, RouteId={}, DirectionId={}, OperationDay={}, StartTime={}",
+                    log.debug(
+                            "AssignedStopId is set. AssignedStopId={}, StopId={}, StopSequence={}, RouteId={}, DirectionId={}, OperationDay={}, StartTime={}",
                             assignedStopId, stopTimeUpdate.getStopId(), stopTimeUpdate.getStopSequence(),
                             tripUpdate.getTrip().getRouteId(), tripUpdate.getTrip().getDirectionId(),
                             tripUpdate.getTrip().getStartDate(), tripUpdate.getTrip().getStartTime());
@@ -93,7 +95,8 @@ public class TripUpdatePublisher extends DatasetPublisher {
         }
 
         //Update cancellation entity timestamps so that Google does not discard them as too old
-        entities = entities.stream().map(entity -> updateCancellationTimestamp(entity, nowInSecs)).collect(Collectors.toList());
+        entities = entities.stream().map(entity -> updateCancellationTimestamp(entity, nowInSecs))
+                .collect(Collectors.toList());
 
         List<GtfsRealtime.FeedEntity> googleDataset = filterTripUpdatesForGoogle(entities);
 
@@ -104,7 +107,8 @@ public class TripUpdatePublisher extends DatasetPublisher {
         log.debug("Bundling done in {} ms", elapsed);
     }
 
-    private void publish(String containerName, List<GtfsRealtime.FeedEntity> feedEntities, long timestamp) throws Exception {
+    private void publish(String containerName, List<GtfsRealtime.FeedEntity> feedEntities, long timestamp)
+            throws Exception {
         GtfsRealtime.FeedMessage fullDump = FeedMessageFactory.createFullFeedMessage(feedEntities, timestamp);
 
         sink.put(containerName, fileName, fullDump.toByteArray());
@@ -119,13 +123,13 @@ public class TripUpdatePublisher extends DatasetPublisher {
 
     public static List<GtfsRealtime.FeedEntity> filterTripUpdatesForGoogle(List<GtfsRealtime.FeedEntity> feedEntities) {
         return feedEntities.stream().filter(feedEntity -> {
-            return feedEntity.hasTripUpdate() &&
-                    feedEntity.getTripUpdate().hasTrip() &&
-                    feedEntity.getTripUpdate().getTrip().hasScheduleRelationship() &&
-                    feedEntity.getTripUpdate().getTrip().hasRouteId() &&
-                    (feedEntity.getTripUpdate().getTrip().getScheduleRelationship() == GtfsRealtime.TripDescriptor.ScheduleRelationship.CANCELED ||
-                            RouteIdUtils.isMetroRoute(feedEntity.getTripUpdate().getTrip().getRouteId()) ||
-                            RouteIdUtils.isTrainRoute(feedEntity.getTripUpdate().getTrip().getRouteId()));
+            return feedEntity.hasTripUpdate() && feedEntity.getTripUpdate().hasTrip()
+                    && feedEntity.getTripUpdate().getTrip().hasScheduleRelationship()
+                    && feedEntity.getTripUpdate().getTrip().hasRouteId()
+                    && (feedEntity.getTripUpdate().getTrip()
+                            .getScheduleRelationship() == GtfsRealtime.TripDescriptor.ScheduleRelationship.CANCELED
+                            || RouteIdUtils.isMetroRoute(feedEntity.getTripUpdate().getTrip().getRouteId())
+                            || RouteIdUtils.isTrainRoute(feedEntity.getTripUpdate().getTrip().getRouteId()));
         }).collect(Collectors.toList());
     }
 
@@ -137,15 +141,13 @@ public class TripUpdatePublisher extends DatasetPublisher {
             GtfsRealtime.FeedMessage feedMessage = datasetEntry.getFeedMessage();
             if (feedMessage.getEntityCount() != 1) {
                 log.warn("FeedMessage entity count != 1. count: {}", feedMessage.getEntityCount());
-                for (GtfsRealtime.FeedEntity entity: feedMessage.getEntityList()) {
+                for (GtfsRealtime.FeedEntity entity : feedMessage.getEntityList()) {
                     log.debug("FeedEntity Id: {}", entity.getId());
                 }
             }
 
-            long expirationTime = feedMessage.getEntityList().stream()
-                    .filter(GtfsRealtime.FeedEntity::hasTripUpdate)
-                    .map(GtfsRealtime.FeedEntity::getTripUpdate)
-                    .filter(TripUpdatePublisher::hasData) //Filter trip updates that have only stop times updates with NO_DATA
+            long expirationTime = feedMessage.getEntityList().stream().filter(GtfsRealtime.FeedEntity::hasTripUpdate)
+                    .map(GtfsRealtime.FeedEntity::getTripUpdate).filter(TripUpdatePublisher::hasData) //Filter trip updates that have only stop times updates with NO_DATA
                     .map(tripUpdate -> {
                         if (shouldUseExpirationTime(tripUpdate)) {
                             //If trip has no stop time updates with timestamps, use trip start time + certain duration for expiration time when the trip update will be removed from the feed
@@ -153,9 +155,7 @@ public class TripUpdatePublisher extends DatasetPublisher {
                         } else {
                             return getLatestTimestampFromStopTimeUpdates(tripUpdate);
                         }
-                    })
-                    .max(Comparator.naturalOrder())
-                    .orElse(0L);
+                    }).max(Comparator.naturalOrder()).orElse(0L);
 
             long age = nowInSecs - expirationTime;
             if (age > keepAfterLastEventInSecs) {
@@ -175,7 +175,8 @@ public class TripUpdatePublisher extends DatasetPublisher {
 
         return tu.getStopTimeUpdateList().stream()
                 .anyMatch(stopTimeUpdate -> !stopTimeUpdate.hasScheduleRelationship() || //No schedule relationship -> defaults to SCHEDULED
-                        stopTimeUpdate.getScheduleRelationship() != GtfsRealtime.TripUpdate.StopTimeUpdate.ScheduleRelationship.NO_DATA);
+                        stopTimeUpdate
+                                .getScheduleRelationship() != GtfsRealtime.TripUpdate.StopTimeUpdate.ScheduleRelationship.NO_DATA);
     }
 
     public static long getExpirationTime(GtfsRealtime.TripUpdate tu, ZoneId timezone, long maxAgeAfterStartSecs) {
@@ -186,53 +187,49 @@ public class TripUpdatePublisher extends DatasetPublisher {
         final int minutes = Integer.parseInt(timeParts[1]);
         final int seconds = Integer.parseInt(timeParts[2]);
 
-        final LocalDateTime localDateTime = hours >= 24 ?
-                date.plusDays(1).atTime(hours - 24, minutes, seconds) :
-                date.atTime(hours, minutes, seconds);
+        final LocalDateTime localDateTime = hours >= 24
+                ? date.plusDays(1).atTime(hours - 24, minutes, seconds)
+                : date.atTime(hours, minutes, seconds);
 
         final ZonedDateTime tripStartTime = localDateTime.atZone(timezone);
         return tripStartTime.plusSeconds(maxAgeAfterStartSecs).toEpochSecond();
     }
-      
+
     static boolean shouldUseExpirationTime(GtfsRealtime.TripUpdate tripUpdate) {
         //Trip is cancelled and has no stop time updates
-        if (tripUpdate.getStopTimeUpdateCount() == 0 &&
-                tripUpdate.getTrip().hasScheduleRelationship() &&
-                tripUpdate.getTrip().getScheduleRelationship() == GtfsRealtime.TripDescriptor.ScheduleRelationship.CANCELED) {
+        if (tripUpdate.getStopTimeUpdateCount() == 0 && tripUpdate.getTrip().hasScheduleRelationship() && tripUpdate
+                .getTrip().getScheduleRelationship() == GtfsRealtime.TripDescriptor.ScheduleRelationship.CANCELED) {
             return true;
         }
 
         //Trip update has only stop cancellations
-        return tripUpdate.getStopTimeUpdateList()
-                .stream()
-                .map(GtfsRealtime.TripUpdate.StopTimeUpdate::getScheduleRelationship)
-                .allMatch(scheduleRelationship -> {
-                    return scheduleRelationship == GtfsRealtime.TripUpdate.StopTimeUpdate.ScheduleRelationship.SKIPPED ||
-                            scheduleRelationship == GtfsRealtime.TripUpdate.StopTimeUpdate.ScheduleRelationship.NO_DATA;
+        return tripUpdate.getStopTimeUpdateList().stream()
+                .map(GtfsRealtime.TripUpdate.StopTimeUpdate::getScheduleRelationship).allMatch(scheduleRelationship -> {
+                    return scheduleRelationship == GtfsRealtime.TripUpdate.StopTimeUpdate.ScheduleRelationship.SKIPPED
+                            || scheduleRelationship == GtfsRealtime.TripUpdate.StopTimeUpdate.ScheduleRelationship.NO_DATA;
                 });
     }
 
     static long getLatestTimestampFromStopTimeUpdates(GtfsRealtime.TripUpdate tu) {
         return tu.getStopTimeUpdateList().stream()
-                .map(stopTimeUpdate -> Math.max(stopTimeUpdate.hasArrival() ? stopTimeUpdate.getArrival().getTime() : 0, stopTimeUpdate.hasDeparture() ? stopTimeUpdate.getDeparture().getTime() : 0))
-                .max(Comparator.naturalOrder())
-                .orElse(0L);
+                .map(stopTimeUpdate -> Math.max(stopTimeUpdate.hasArrival() ? stopTimeUpdate.getArrival().getTime() : 0,
+                        stopTimeUpdate.hasDeparture() ? stopTimeUpdate.getDeparture().getTime() : 0))
+                .max(Comparator.naturalOrder()).orElse(0L);
     }
 
     static List<GtfsRealtime.FeedEntity> getFeedEntities(Map<String, DatasetEntry> state) {
-        return state.values().stream()
-                .sorted(Comparator.comparingLong(DatasetEntry::getEventTimeUtcMs).reversed()) // Sort by event time, latest first
-                .map(DatasetEntry::getEntities)
-                .flatMap(Collection::stream)
-                .collect(Collectors.toList());
+        return state.values().stream().sorted(Comparator.comparingLong(DatasetEntry::getEventTimeUtcMs).reversed()) // Sort by event time, latest first
+                .map(DatasetEntry::getEntities).flatMap(Collection::stream).collect(Collectors.toList());
     }
 
-    public static GtfsRealtime.FeedEntity updateCancellationTimestamp(GtfsRealtime.FeedEntity feedEntity, long timeInSecs) {
-        if (feedEntity.hasTripUpdate() &&
-            feedEntity.getTripUpdate().hasTrip() &&
-            feedEntity.getTripUpdate().getTrip().hasScheduleRelationship() &&
-            feedEntity.getTripUpdate().getTrip().getScheduleRelationship() == GtfsRealtime.TripDescriptor.ScheduleRelationship.CANCELED) {
-            return feedEntity.toBuilder().setTripUpdate(feedEntity.getTripUpdate().toBuilder().setTimestamp(timeInSecs)).build();
+    public static GtfsRealtime.FeedEntity updateCancellationTimestamp(GtfsRealtime.FeedEntity feedEntity,
+            long timeInSecs) {
+        if (feedEntity.hasTripUpdate() && feedEntity.getTripUpdate().hasTrip()
+                && feedEntity.getTripUpdate().getTrip().hasScheduleRelationship()
+                && feedEntity.getTripUpdate().getTrip()
+                        .getScheduleRelationship() == GtfsRealtime.TripDescriptor.ScheduleRelationship.CANCELED) {
+            return feedEntity.toBuilder().setTripUpdate(feedEntity.getTripUpdate().toBuilder().setTimestamp(timeInSecs))
+                    .build();
         } else {
             return feedEntity;
         }

@@ -30,10 +30,8 @@ public class AzureSink implements ISink {
     private AzureSink(String accountName, String accountKey, long cacheMaxAgeSecs) {
         this.cacheMaxAgeSeconds = cacheMaxAgeSecs;
 
-        final String storageConnectionString = "DefaultEndpointsProtocol=https;" +
-                "AccountName=" + accountName + ";" +
-                "AccountKey=" + accountKey + ";" +
-                "EndpointSuffix=core.windows.net";
+        final String storageConnectionString = "DefaultEndpointsProtocol=https;" + "AccountName=" + accountName + ";"
+                + "AccountKey=" + accountKey + ";" + "EndpointSuffix=core.windows.net";
 
 
         blobServiceClient = new BlobServiceClientBuilder().connectionString(storageConnectionString).buildClient();
@@ -42,13 +40,13 @@ public class AzureSink implements ISink {
     public static AzureSink newInstance(Config config) throws Exception {
         String name = config.getString("bundler.output.azure.accountName");
         long maxAge = config.getDuration("bundler.output.azure.cacheMaxAge", TimeUnit.SECONDS);
-    
+
         String key = System.getenv("TRANSITDATA_AZURE_STORAGE_KEY");
-    
+
         if (key == null || key.isEmpty()) {
             throw new IllegalArgumentException("Azure storage key not found.");
         }
-    
+
         return new AzureSink(name, key, maxAge);
     }
 
@@ -64,7 +62,8 @@ public class AzureSink implements ISink {
     }
 
     private void upload(String containerName, String name, byte[] data) throws Exception {
-        log.debug("Uploading file {} with {} kB to Azure Blob storage container {}", name, (data.length / 1024), containerName);
+        log.debug("Uploading file {} with {} kB to Azure Blob storage container {}", name, (data.length / 1024),
+                containerName);
         final long startTime = System.nanoTime();
 
         try {
@@ -78,8 +77,7 @@ public class AzureSink implements ISink {
             writeToBlob(blockBlobClient, data);
 
             final BlobHttpHeaders blobHttpHeaders = new BlobHttpHeaders()
-                    .setCacheControl("max-age=" + cacheMaxAgeSeconds)
-                    .setContentType("application/x-protobuf");
+                    .setCacheControl("max-age=" + cacheMaxAgeSeconds).setContentType("application/x-protobuf");
 
             blockBlobClient.setHttpHeaders(blobHttpHeaders);
         } catch (Exception ex) {
@@ -92,7 +90,7 @@ public class AzureSink implements ISink {
     }
 
     private static void writeToBlob(BlockBlobClient blockBlobClient, byte[] data) throws IOException {
-        try (OutputStream os = blockBlobClient.getBlobOutputStream(true)){
+        try (OutputStream os = blockBlobClient.getBlobOutputStream(true)) {
             os.write(data);
         }
     }

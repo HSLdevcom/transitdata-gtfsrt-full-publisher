@@ -51,7 +51,8 @@ public abstract class DatasetPublisher {
         } else if (type == DataType.VehiclePosition) {
             return new VehiclePositionPublisher(config, sink);
         } else {
-            throw new IllegalArgumentException("Invalid DataType, should be TripUpdate or ServiceAlert or VehiclePosition");
+            throw new IllegalArgumentException(
+                    "Invalid DataType, should be TripUpdate or ServiceAlert or VehiclePosition");
         }
     }
 

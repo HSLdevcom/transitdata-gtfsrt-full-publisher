@@ -27,7 +27,8 @@ public class ServiceAlertPublisher extends DatasetPublisher {
     public void publish(List<DatasetEntry> newMessages) throws Exception {
         //We're only interested in the first item in the list.
         // Sort by event time, latest first
-        Optional<DatasetEntry> latest = newMessages.stream().max(Comparator.comparingLong(DatasetEntry::getEventTimeUtcMs));
+        Optional<DatasetEntry> latest = newMessages.stream()
+                .max(Comparator.comparingLong(DatasetEntry::getEventTimeUtcMs));
         if (latest.isPresent()) {
             GtfsRealtime.FeedMessage msg = latest.get().getFeedMessage();
 
@@ -36,6 +37,5 @@ public class ServiceAlertPublisher extends DatasetPublisher {
             sink.put(containerName, fileName, data);
         }
     }
-
 
 }
