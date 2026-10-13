@@ -1,4 +1,4 @@
-# transitdata-gtfsrt-full-publisher [![Test and create Docker image](https://github.com/HSLdevcom/transitdata-gtfsrt-full-publisher/actions/workflows/test-and-build.yml/badge.svg)](https://github.com/HSLdevcom/transitdata-gtfsrt-full-publisher/actions/workflows/test-and-build.yml)
+# transitdata-gtfsrt-full-publisher [![CI/CD](https://github.com/HSLdevcom/transitdata-gtfsrt-full-publisher/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/HSLdevcom/transitdata-gtfsrt-full-publisher/actions/workflows/ci-cd.yml)
 
 ## Description
 
@@ -25,14 +25,20 @@ This project depends on [transitdata-common](https://github.com/HSLdevcom/transi
 Either use released versions from the GitHub Packages repository (Maven) or build your own and install to local Maven repository:
   - `cd transitdata-common && mvn install`
 
+Requires Java 25. `transitdata-common` is resolved from GitHub Packages, so `GITHUB_ACTOR` and `GITHUB_TOKEN`
+(a token with `read:packages`) must be set, or configured in `~/.m2/settings.xml`.
+
 ### Locally
 
-- `mvn compile`
-- `mvn package`  
+- `./mvnw compile`
+- `./mvnw test` runs the unit tests
+- `./mvnw verify` also runs the integration tests (`*IT`, needs Docker for Testcontainers: Pulsar and Azurite)
+- `./mvnw spotless:apply` formats the code; CI only runs `spotless:check`
+- `./mvnw package` builds `target/transitdata-gtfsrt-full-publisher.jar`
 
 ### Docker image
 
-- Run [this script](build-image.sh) to build the Docker image
+- Run [this script](build-image.sh) to build the Docker image (passes `GITHUB_TOKEN` as a build secret)
 
 ## Running
 
@@ -58,7 +64,7 @@ Either use released versions from the GitHub Packages repository (Maven) or buil
 #### Azure
 
 * `AZURE_ACCOUNT_NAME`: Azure Storage account name
-* `AZURE_ACCOUNT_KEY_PATH`: path to the file that contains Azure Storage account connection string
+* `TRANSITDATA_AZURE_STORAGE_KEY`: Azure Storage account key
 * `CACHE_MAX_AGE`: value to use for HTTP caching header
 
 #### Data
