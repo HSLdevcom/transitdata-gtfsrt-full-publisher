@@ -12,9 +12,6 @@
             </layout>
         </encoder>
     </appender>
-    <logger name="fi.hsl.transitdata.publisher.sink.AzureSink" level="debug" additivity="false">
-        <appender-ref ref="stdout" />
-    </logger>
     <logger name="fi.hsl" level="info" additivity="false">
         <appender-ref ref="stdout" />
     </logger>

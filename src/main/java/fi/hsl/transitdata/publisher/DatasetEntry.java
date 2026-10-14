@@ -19,15 +19,14 @@ public class DatasetEntry {
     public static DatasetEntry newEntry(Message msg, DatasetPublisher.DataType expectedType) throws Exception {
         long eventTimeMs = msg.getEventTime();
         GtfsRealtime.FeedMessage feedMessage = GtfsRealtime.FeedMessage.parseFrom(msg.getData());
-        if (expectedType == DatasetPublisher.DataType.ServiceAlert || expectedType == DatasetPublisher.DataType.VehiclePosition) {
+        if (expectedType == DatasetPublisher.DataType.ServiceAlert
+                || expectedType == DatasetPublisher.DataType.VehiclePosition) {
             // No ID for Service Alerts or Vehicle Positions
             return new DatasetEntry(null, eventTimeMs, feedMessage);
-        }
-        else if (expectedType == DatasetPublisher.DataType.TripUpdate) {
+        } else if (expectedType == DatasetPublisher.DataType.TripUpdate) {
             String id = msg.getKey();
             return new DatasetEntry(id, eventTimeMs, feedMessage);
-        }
-        else {
+        } else {
             throw new IllegalArgumentException("Invalid data type to expect" + expectedType);
         }
     }
