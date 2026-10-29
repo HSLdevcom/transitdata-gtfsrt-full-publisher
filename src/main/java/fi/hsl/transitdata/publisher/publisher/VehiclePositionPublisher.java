@@ -3,6 +3,7 @@ package fi.hsl.transitdata.publisher.publisher;
 import com.google.transit.realtime.GtfsRealtime;
 import com.typesafe.config.Config;
 import fi.hsl.common.gtfsrt.FeedMessageFactory;
+import fi.hsl.common.metrics.PipelineMetrics;
 import fi.hsl.common.transitdata.RouteIdUtils;
 import fi.hsl.transitdata.publisher.DatasetEntry;
 import fi.hsl.transitdata.publisher.DatasetPublisher;
@@ -17,6 +18,8 @@ import java.util.stream.Collectors;
 
 public class VehiclePositionPublisher extends DatasetPublisher {
     private static final Logger logger = LoggerFactory.getLogger(VehiclePositionPublisher.class);
+
+    private static final String PIPELINE = "vehicleposition";
 
     private Map<String, GtfsRealtime.FeedEntity> vehiclePositionCache = new HashMap<>(1000);
 
@@ -77,6 +80,7 @@ public class VehiclePositionPublisher extends DatasetPublisher {
         publishDataset(trainMetroDatasetContainerName, trainMetroDataset, currentTime);
 
         logger.info("Vehicle positions published in {}ms", Duration.ofNanos(System.nanoTime() - startTime).toMillis());
+        PipelineMetrics.observePublishDuration(PIPELINE, (System.nanoTime() - startTime) / 1_000_000_000.0);
     }
 
     private void pruneVehiclePositionCache(Instant currentTime) {
