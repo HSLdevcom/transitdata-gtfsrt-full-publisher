@@ -2,6 +2,7 @@ package fi.hsl.transitdata.publisher.publisher;
 
 import com.google.transit.realtime.GtfsRealtime;
 import com.typesafe.config.Config;
+import fi.hsl.common.metrics.PipelineMetrics;
 import fi.hsl.transitdata.publisher.DatasetEntry;
 import fi.hsl.transitdata.publisher.DatasetPublisher;
 import fi.hsl.transitdata.publisher.sink.ISink;
@@ -14,6 +15,8 @@ import java.util.Optional;
 
 public class ServiceAlertPublisher extends DatasetPublisher {
     private static final Logger log = LoggerFactory.getLogger(DatasetPublisher.class);
+
+    private static final String PIPELINE = "servicealert";
 
     private final String containerName;
 
@@ -30,11 +33,13 @@ public class ServiceAlertPublisher extends DatasetPublisher {
         Optional<DatasetEntry> latest = newMessages.stream()
                 .max(Comparator.comparingLong(DatasetEntry::getEventTimeUtcMs));
         if (latest.isPresent()) {
+            long startTime = System.nanoTime();
             GtfsRealtime.FeedMessage msg = latest.get().getFeedMessage();
 
             log.debug("Publishing a new Service Alert");
             byte[] data = msg.toByteArray();
             sink.put(containerName, fileName, data);
+            PipelineMetrics.observePublishDuration(PIPELINE, (System.nanoTime() - startTime) / 1_000_000_000.0);
         }
     }
 
