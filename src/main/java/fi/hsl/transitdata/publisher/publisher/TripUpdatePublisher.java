@@ -3,6 +3,7 @@ package fi.hsl.transitdata.publisher.publisher;
 import com.google.transit.realtime.GtfsRealtime;
 import com.typesafe.config.Config;
 import fi.hsl.common.gtfsrt.FeedMessageFactory;
+import fi.hsl.common.metrics.PipelineMetrics;
 import fi.hsl.common.transitdata.RouteIdUtils;
 import fi.hsl.transitdata.publisher.DatasetEntry;
 import fi.hsl.transitdata.publisher.DatasetPublisher;
@@ -22,6 +23,8 @@ import java.util.stream.Collectors;
 
 public class TripUpdatePublisher extends DatasetPublisher {
     private static final Logger log = LoggerFactory.getLogger(TripUpdatePublisher.class);
+
+    private static final String PIPELINE = "tripupdate";
 
     final HashMap<String, DatasetEntry> cache = new HashMap<>();
     final long maxAgeInSecs;
@@ -105,6 +108,7 @@ public class TripUpdatePublisher extends DatasetPublisher {
 
         long elapsed = System.currentTimeMillis() - startTime;
         log.debug("Bundling done in {} ms", elapsed);
+        PipelineMetrics.observePublishDuration(PIPELINE, elapsed / 1000.0);
     }
 
     private void publish(String containerName, List<GtfsRealtime.FeedEntity> feedEntities, long timestamp)
